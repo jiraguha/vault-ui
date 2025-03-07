@@ -7,8 +7,8 @@ import { Eye, EyeOff, Trash, Plus, Pencil, Upload, ChevronDown, ChevronRight, Ke
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { createMockApiClient, type MockApiClient } from "@/lib/mockApiClient";
 import type { Parameter } from "@shared/schema";
+import { createMockApiClient, type MockApiClient } from "@/lib/mockApiClient";
 
 export default function Parameters() {
   const [data, setData] = useState<Record<string, Parameter[]>>({});
@@ -22,10 +22,8 @@ export default function Parameters() {
   const [editingParameter, setEditingParameter] = useState<Parameter | null>(null);
   const [apiClient] = useState<MockApiClient>(() => createMockApiClient());
   const fileInputRef = useRef<HTMLInputElement>(null);
-
   const [showNamespaceDialog, setShowNamespaceDialog] = useState(false);
   const [newNamespace, setNewNamespace] = useState("");
-  const [namespaceStep, setNamespaceStep] = useState<1 | 2>(1);
 
   const { toast } = useToast();
 
@@ -169,27 +167,16 @@ export default function Parameters() {
   };
 
   const createNamespace = async () => {
-    if (namespaceStep === 1) {
-      if (!newNamespace.trim()) {
-        toast({ title: "Namespace name is required", variant: "destructive" });
-        return;
-      }
-      try {
-        await apiClient.createNamespace(newNamespace);
-        setNamespaceStep(2);
-      } catch (error) {
-        toast({
-          title: "Failed to create namespace",
-          description: error instanceof Error ? error.message : "Unknown error",
-          variant: "destructive"
-        });
-      }
-    } else {
-      if (!newKey || !newValue) {
-        toast({ title: "Both key and value are required", variant: "destructive" });
-        return;
-      }
+    if (!newNamespace.trim() || !newKey || !newValue) {
+      toast({ 
+        title: "All fields are required", 
+        description: "Please provide namespace name and initial variable details",
+        variant: "destructive" 
+      });
+      return;
+    }
 
+    try {
       const variable = {
         name: newKey,
         value: newValue,
@@ -197,18 +184,17 @@ export default function Parameters() {
         environment: "development",
       };
 
-      try {
-        await apiClient.addVariable(newNamespace, variable);
-        await apiClient.fetchNamespaces().then(setData);
-        setSelectedNamespace(newNamespace);
-        resetNamespaceDialog();
-        toast({ title: "Namespace created successfully" });
-      } catch (error) {
-        toast({
-          title: "Failed to add initial variable",
-          variant: "destructive"
-        });
-      }
+      await apiClient.createNamespaceWithVariable(newNamespace, variable);
+      await apiClient.fetchNamespaces().then(setData);
+      setSelectedNamespace(newNamespace);
+      resetNamespaceDialog();
+      toast({ title: "Namespace created successfully" });
+    } catch (error) {
+      toast({ 
+        title: "Failed to create namespace", 
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive" 
+      });
     }
   };
 
@@ -217,7 +203,6 @@ export default function Parameters() {
     setNewKey("");
     setNewValue("");
     setIsSecure(false);
-    setNamespaceStep(1);
     setShowNamespaceDialog(false);
   };
 
@@ -405,45 +390,38 @@ export default function Parameters() {
       }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {namespaceStep === 1 ? 'Create New Namespace' : 'Add Initial Variable'}
-            </DialogTitle>
+            <DialogTitle>Create New Namespace</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-4">
-            {namespaceStep === 1 ? (
-              <Input
-                placeholder="Namespace name (e.g., myapp/dev)"
-                value={newNamespace}
-                onChange={(e) => setNewNamespace(e.target.value)}
+            <Input
+              placeholder="Namespace name (e.g., myapp/dev)"
+              value={newNamespace}
+              onChange={(e) => setNewNamespace(e.target.value)}
+            />
+            <Input
+              placeholder="Initial Variable Key"
+              value={newKey}
+              onChange={(e) => setNewKey(e.target.value)}
+            />
+            <Input
+              placeholder="Initial Variable Value"
+              value={newValue}
+              onChange={(e) => setNewValue(e.target.value)}
+              type={isSecure ? "password" : "text"}
+            />
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Secure Parameter</span>
+              <Switch
+                checked={isSecure}
+                onCheckedChange={setIsSecure}
               />
-            ) : (
-              <>
-                <Input
-                  placeholder="Key"
-                  value={newKey}
-                  onChange={(e) => setNewKey(e.target.value)}
-                />
-                <Input
-                  placeholder="Value"
-                  value={newValue}
-                  onChange={(e) => setNewValue(e.target.value)}
-                  type={isSecure ? "password" : "text"}
-                />
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Secure Parameter</span>
-                  <Switch
-                    checked={isSecure}
-                    onCheckedChange={setIsSecure}
-                  />
-                </div>
-              </>
-            )}
+            </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={resetNamespaceDialog}>
                 Cancel
               </Button>
               <Button onClick={createNamespace}>
-                {namespaceStep === 1 ? 'Next' : 'Create'}
+                Create Namespace
               </Button>
             </div>
           </div>
