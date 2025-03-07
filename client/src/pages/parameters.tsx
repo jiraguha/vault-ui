@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Eye, EyeOff, Trash, Plus } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { createMockApiClient, type MockApiClient } from "@/lib/mockApiClient";
 import type { Parameter } from "@shared/schema";
@@ -65,7 +66,11 @@ export default function Parameters() {
 
   return (
     <div className="p-6">
-      <h2 className="text-2xl font-bold">AWS Parameter Store UI</h2>
+      <div className="flex items-center gap-3 mb-4">
+        <h2 className="text-2xl font-bold">AWS Parameter Store UI</h2>
+        <Badge variant="outline">v1.0.0</Badge>
+      </div>
+
       <div className="flex gap-4 mt-4">
         {Object.keys(data).map((namespace) => (
           <Card
