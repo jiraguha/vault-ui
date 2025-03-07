@@ -40,8 +40,11 @@ export default function Parameters() {
         environment: "development",
       };
 
-      if (editingParameter) {
-        apiClient.updateVariable(selectedNamespace, editingParameter.name, variable).then(() => {
+      // Check if parameter already exists
+      const existingParam = editingParameter || data[selectedNamespace]?.find(p => p.name === newKey);
+
+      if (existingParam) {
+        apiClient.updateVariable(selectedNamespace, existingParam.name, variable).then(() => {
           apiClient.fetchNamespaces().then(setData);
           resetForm();
           setShowDialog(false);
