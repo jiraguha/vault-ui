@@ -1,4 +1,4 @@
-import { pgTable, text, serial, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, boolean, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -8,6 +8,7 @@ export const parameters = pgTable("parameters", {
   value: text("value").notNull(),
   isSecure: boolean("is_secure").notNull().default(false),
   environment: text("environment").notNull(),
+  version: integer("version").notNull().default(1),
 });
 
 export const insertParameterSchema = createInsertSchema(parameters).pick({

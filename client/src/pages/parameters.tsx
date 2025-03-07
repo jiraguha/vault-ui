@@ -105,7 +105,19 @@ export default function Parameters() {
                     key={param.id}
                     className="flex items-center justify-between border-b p-2"
                   >
-                    <span>{param.name}</span>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{param.name}</span>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge variant="secondary" className="text-xs">
+                          v{param.version || 1}
+                        </Badge>
+                        {param.isSecure && (
+                          <Badge variant="outline" className="text-xs">
+                            secure
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
                     <div className="flex items-center gap-2">
                       <span className="font-mono">
                         {param.isSecure && !showSecrets[param.id]
