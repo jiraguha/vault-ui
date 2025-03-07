@@ -89,6 +89,9 @@ export default function Parameters() {
     const reader = new FileReader();
     reader.onload = async (e) => {
       const content = e.target?.result as string;
+      let updated = 0;
+      let created = 0;
+
       const variables = content
         .split('\n')
         .filter(line => line.trim() && !line.startsWith('#'))
@@ -105,14 +108,27 @@ export default function Parameters() {
 
       for (const variable of variables) {
         try {
-          await apiClient.addVariable(selectedNamespace, variable);
+          // Check if parameter already exists
+          const existingParam = data[selectedNamespace]?.find(p => p.name === variable.name);
+
+          if (existingParam) {
+            await apiClient.updateVariable(selectedNamespace, variable.name, variable);
+            updated++;
+          } else {
+            await apiClient.addVariable(selectedNamespace, variable);
+            created++;
+          }
         } catch (error) {
           console.error(`Failed to import ${variable.name}:`, error);
         }
       }
 
       apiClient.fetchNamespaces().then(setData);
-      toast({ title: `Imported ${variables.length} variables from .env file` });
+      toast({ 
+        title: `Import completed`, 
+        description: `Created ${created} new parameters, updated ${updated} existing parameters.`
+      });
+
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
