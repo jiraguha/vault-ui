@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Eye, EyeOff, Trash, Plus } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { createMockApiClient, type MockApiClient } from "@/lib/mockApiClient";
 import type { Parameter } from "@shared/schema";
@@ -13,6 +14,7 @@ export default function Parameters() {
   const [selectedNamespace, setSelectedNamespace] = useState<string | null>(null);
   const [newKey, setNewKey] = useState("");
   const [newValue, setNewValue] = useState("");
+  const [isSecure, setIsSecure] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
   const [showSecrets, setShowSecrets] = useState<Record<number, boolean>>({});
   const [apiClient] = useState<MockApiClient>(() => createMockApiClient());
@@ -31,7 +33,7 @@ export default function Parameters() {
       const variable = {
         name: newKey,
         value: newValue,
-        isSecure: newKey.toLowerCase().includes("secret"),
+        isSecure,
         environment: "development",
       };
 
@@ -39,6 +41,7 @@ export default function Parameters() {
         apiClient.fetchNamespaces().then(setData);
         setNewKey("");
         setNewValue("");
+        setIsSecure(false);
         setShowDialog(false);
         toast({ title: "Variable added successfully" });
       });
@@ -52,6 +55,12 @@ export default function Parameters() {
         toast({ title: "Variable deleted successfully" });
       });
     }
+  };
+
+  const resetForm = () => {
+    setNewKey("");
+    setNewValue("");
+    setIsSecure(false);
   };
 
   return (
@@ -127,7 +136,10 @@ export default function Parameters() {
         </div>
       )}
 
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+      <Dialog open={showDialog} onOpenChange={(open) => {
+        if (!open) resetForm();
+        setShowDialog(open);
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add Environment Variable</DialogTitle>
@@ -142,7 +154,15 @@ export default function Parameters() {
               placeholder="Value"
               value={newValue}
               onChange={(e) => setNewValue(e.target.value)}
+              type={isSecure ? "password" : "text"}
             />
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Secure Parameter</span>
+              <Switch
+                checked={isSecure}
+                onCheckedChange={setIsSecure}
+              />
+            </div>
             <Button onClick={addVariable} className="w-full">
               Save
             </Button>
