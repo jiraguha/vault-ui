@@ -21,6 +21,11 @@ export default function Parameters() {
   const [editingParameter, setEditingParameter] = useState<Parameter | null>(null);
   const [apiClient] = useState<MockApiClient>(() => createMockApiClient());
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [showNamespaceDialog, setShowNamespaceDialog] = useState(false);
+  const [newNamespace, setNewNamespace] = useState("");
+  const [namespaceStep, setNamespaceStep] = useState<1 | 2>(1);
+
   const { toast } = useToast();
 
   useEffect(() => {
@@ -40,7 +45,6 @@ export default function Parameters() {
         environment: "development",
       };
 
-      // Check if parameter already exists
       const existingParam = editingParameter || data[selectedNamespace]?.find(p => p.name === newKey);
 
       if (existingParam) {
@@ -100,10 +104,10 @@ export default function Parameters() {
         .filter(line => line.trim() && !line.startsWith('#'))
         .map(line => {
           const [key, ...valueParts] = line.split('=');
-          const value = valueParts.join('='); // Rejoin in case value contains =
+          const value = valueParts.join('='); 
           return {
             name: key.trim(),
-            value: value.trim().replace(/^["']|["']$/g, ''), // Remove quotes if present
+            value: value.trim().replace(/^["']|["']$/g, ''), 
             isSecure: key.toLowerCase().includes('secret') || key.toLowerCase().includes('password'),
             environment: "development"
           };
@@ -111,7 +115,6 @@ export default function Parameters() {
 
       for (const variable of variables) {
         try {
-          // Check if parameter already exists
           const existingParam = data[selectedNamespace]?.find(p => p.name === variable.name);
 
           if (existingParam) {
@@ -140,11 +143,70 @@ export default function Parameters() {
     reader.readAsText(file);
   };
 
+  const createNamespace = async () => {
+    if (namespaceStep === 1) {
+      if (!newNamespace.trim()) {
+        toast({ title: "Namespace name is required", variant: "destructive" });
+        return;
+      }
+      try {
+        await apiClient.createNamespace(newNamespace);
+        setNamespaceStep(2);
+      } catch (error) {
+        toast({ 
+          title: "Failed to create namespace", 
+          description: error instanceof Error ? error.message : "Unknown error",
+          variant: "destructive" 
+        });
+      }
+    } else {
+      if (!newKey || !newValue) {
+        toast({ title: "Both key and value are required", variant: "destructive" });
+        return;
+      }
+
+      const variable = {
+        name: newKey,
+        value: newValue,
+        isSecure,
+        environment: "development",
+      };
+
+      try {
+        await apiClient.addVariable(newNamespace, variable);
+        await apiClient.fetchNamespaces().then(setData);
+        setSelectedNamespace(newNamespace);
+        resetNamespaceDialog();
+        toast({ title: "Namespace created successfully" });
+      } catch (error) {
+        toast({ 
+          title: "Failed to add initial variable", 
+          variant: "destructive" 
+        });
+      }
+    }
+  };
+
+  const resetNamespaceDialog = () => {
+    setNewNamespace("");
+    setNewKey("");
+    setNewValue("");
+    setIsSecure(false);
+    setNamespaceStep(1);
+    setShowNamespaceDialog(false);
+  };
+
   return (
     <div className="p-6">
-      <div className="flex items-center gap-3 mb-4">
-        <h2 className="text-2xl font-bold">AWS Parameter Store UI</h2>
-        <Badge variant="outline">v1.0.0</Badge>
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <div className="flex items-center gap-3">
+          <h2 className="text-2xl font-bold">AWS Parameter Store UI</h2>
+          <Badge variant="outline">v1.0.0</Badge>
+        </div>
+        <Button onClick={() => setShowNamespaceDialog(true)} size="sm">
+          <Plus className="h-4 w-4 mr-2" />
+          Create Namespace
+        </Button>
       </div>
 
       <div className="flex gap-4 mt-4">
@@ -289,6 +351,56 @@ export default function Parameters() {
             <Button onClick={addOrUpdateVariable} className="w-full">
               {editingParameter ? 'Update' : 'Save'}
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={showNamespaceDialog} onOpenChange={(open) => {
+        if (!open) resetNamespaceDialog();
+        setShowNamespaceDialog(open);
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {namespaceStep === 1 ? 'Create New Namespace' : 'Add Initial Variable'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            {namespaceStep === 1 ? (
+              <Input
+                placeholder="Namespace name (e.g., myapp/dev)"
+                value={newNamespace}
+                onChange={(e) => setNewNamespace(e.target.value)}
+              />
+            ) : (
+              <>
+                <Input
+                  placeholder="Key"
+                  value={newKey}
+                  onChange={(e) => setNewKey(e.target.value)}
+                />
+                <Input
+                  placeholder="Value"
+                  value={newValue}
+                  onChange={(e) => setNewValue(e.target.value)}
+                  type={isSecure ? "password" : "text"}
+                />
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Secure Parameter</span>
+                  <Switch
+                    checked={isSecure}
+                    onCheckedChange={setIsSecure}
+                  />
+                </div>
+              </>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={resetNamespaceDialog}>
+                Cancel
+              </Button>
+              <Button onClick={createNamespace}>
+                {namespaceStep === 1 ? 'Next' : 'Create'}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

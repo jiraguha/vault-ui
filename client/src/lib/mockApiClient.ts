@@ -16,6 +16,18 @@ export const createMockApiClient = () => {
     fetchNamespaces: async () => {
       return new Promise<Store>((resolve) => setTimeout(() => resolve(store), 200));
     },
+    createNamespace: async (namespace: string) => {
+      return new Promise<void>((resolve, reject) => {
+        setTimeout(() => {
+          if (store[namespace]) {
+            reject(new Error("Namespace already exists"));
+          } else {
+            store[namespace] = [];
+            resolve();
+          }
+        }, 200);
+      });
+    },
     addVariable: async (namespace: string, variable: Omit<Parameter, "id" | "version">) => {
       return new Promise<void>((resolve) => {
         setTimeout(() => {
