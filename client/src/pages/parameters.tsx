@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Eye, EyeOff, Trash, Plus, Pencil } from "lucide-react";
+import { Eye, EyeOff, Trash, Plus, Pencil, Upload } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -20,6 +20,7 @@ export default function Parameters() {
   const [showSecrets, setShowSecrets] = useState<Record<number, boolean>>({});
   const [editingParameter, setEditingParameter] = useState<Parameter | null>(null);
   const [apiClient] = useState<MockApiClient>(() => createMockApiClient());
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -81,6 +82,45 @@ export default function Parameters() {
     setShowDialog(true);
   };
 
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !selectedNamespace) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const content = e.target?.result as string;
+      const variables = content
+        .split('\n')
+        .filter(line => line.trim() && !line.startsWith('#'))
+        .map(line => {
+          const [key, ...valueParts] = line.split('=');
+          const value = valueParts.join('='); // Rejoin in case value contains =
+          return {
+            name: key.trim(),
+            value: value.trim().replace(/^["']|["']$/g, ''), // Remove quotes if present
+            isSecure: key.toLowerCase().includes('secret') || key.toLowerCase().includes('password'),
+            environment: "development"
+          };
+        });
+
+      for (const variable of variables) {
+        try {
+          await apiClient.addVariable(selectedNamespace, variable);
+        } catch (error) {
+          console.error(`Failed to import ${variable.name}:`, error);
+        }
+      }
+
+      apiClient.fetchNamespaces().then(setData);
+      toast({ title: `Imported ${variables.length} variables from .env file` });
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    };
+
+    reader.readAsText(file);
+  };
+
   return (
     <div className="p-6">
       <div className="flex items-center gap-3 mb-4">
@@ -110,13 +150,30 @@ export default function Parameters() {
             <CardContent className="py-6">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-semibold">{selectedNamespace} Variables</h3>
-                <Button onClick={() => {
-                  resetForm();
-                  setShowDialog(true);
-                }} size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Variable
-                </Button>
+                <div className="flex gap-2">
+                  <input
+                    type="file"
+                    accept=".env"
+                    onChange={handleFileUpload}
+                    ref={fileInputRef}
+                    className="hidden"
+                  />
+                  <Button 
+                    onClick={() => fileInputRef.current?.click()} 
+                    size="sm"
+                    variant="outline"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Import .env
+                  </Button>
+                  <Button onClick={() => {
+                    resetForm();
+                    setShowDialog(true);
+                  }} size="sm">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Variable
+                  </Button>
+                </div>
               </div>
 
               <div className="space-y-2">
