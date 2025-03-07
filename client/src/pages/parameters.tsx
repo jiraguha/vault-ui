@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Eye, EyeOff, Trash, Plus } from "lucide-react";
+import { Eye, EyeOff, Trash, Plus, Pencil } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -18,6 +18,7 @@ export default function Parameters() {
   const [isSecure, setIsSecure] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
   const [showSecrets, setShowSecrets] = useState<Record<number, boolean>>({});
+  const [editingParameter, setEditingParameter] = useState<Parameter | null>(null);
   const [apiClient] = useState<MockApiClient>(() => createMockApiClient());
   const { toast } = useToast();
 
@@ -29,7 +30,7 @@ export default function Parameters() {
     setShowSecrets((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const addVariable = () => {
+  const addOrUpdateVariable = () => {
     if (selectedNamespace && newKey && newValue) {
       const variable = {
         name: newKey,
@@ -38,14 +39,21 @@ export default function Parameters() {
         environment: "development",
       };
 
-      apiClient.addVariable(selectedNamespace, variable).then(() => {
-        apiClient.fetchNamespaces().then(setData);
-        setNewKey("");
-        setNewValue("");
-        setIsSecure(false);
-        setShowDialog(false);
-        toast({ title: "Variable added successfully" });
-      });
+      if (editingParameter) {
+        apiClient.updateVariable(selectedNamespace, editingParameter.name, variable).then(() => {
+          apiClient.fetchNamespaces().then(setData);
+          resetForm();
+          setShowDialog(false);
+          toast({ title: "Variable updated successfully" });
+        });
+      } else {
+        apiClient.addVariable(selectedNamespace, variable).then(() => {
+          apiClient.fetchNamespaces().then(setData);
+          resetForm();
+          setShowDialog(false);
+          toast({ title: "Variable added successfully" });
+        });
+      }
     }
   };
 
@@ -62,6 +70,15 @@ export default function Parameters() {
     setNewKey("");
     setNewValue("");
     setIsSecure(false);
+    setEditingParameter(null);
+  };
+
+  const startEditing = (param: Parameter) => {
+    setEditingParameter(param);
+    setNewKey(param.name);
+    setNewValue(param.value);
+    setIsSecure(param.isSecure);
+    setShowDialog(true);
   };
 
   return (
@@ -93,7 +110,10 @@ export default function Parameters() {
             <CardContent className="py-6">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-semibold">{selectedNamespace} Variables</h3>
-                <Button onClick={() => setShowDialog(true)} size="sm">
+                <Button onClick={() => {
+                  resetForm();
+                  setShowDialog(true);
+                }} size="sm">
                   <Plus className="h-4 w-4 mr-2" />
                   Add Variable
                 </Button>
@@ -140,6 +160,13 @@ export default function Parameters() {
                       <Button
                         variant="ghost"
                         size="sm"
+                        onClick={() => startEditing(param)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => deleteVariable(param.name)}
                       >
                         <Trash className="h-4 w-4" />
@@ -159,13 +186,16 @@ export default function Parameters() {
       }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Environment Variable</DialogTitle>
+            <DialogTitle>
+              {editingParameter ? 'Edit Parameter' : 'Add Environment Variable'}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-4">
             <Input
               placeholder="Key"
               value={newKey}
               onChange={(e) => setNewKey(e.target.value)}
+              disabled={!!editingParameter}
             />
             <Input
               placeholder="Value"
@@ -180,8 +210,8 @@ export default function Parameters() {
                 onCheckedChange={setIsSecure}
               />
             </div>
-            <Button onClick={addVariable} className="w-full">
-              Save
+            <Button onClick={addOrUpdateVariable} className="w-full">
+              {editingParameter ? 'Update' : 'Save'}
             </Button>
           </div>
         </DialogContent>
