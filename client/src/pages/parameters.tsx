@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Eye, EyeOff, Trash, Plus, Pencil, Upload } from "lucide-react";
+import { Eye, EyeOff, Trash, Plus, Pencil, Upload, ChevronDown, ChevronRight, Key } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +13,7 @@ import type { Parameter } from "@shared/schema";
 export default function Parameters() {
   const [data, setData] = useState<Record<string, Parameter[]>>({});
   const [selectedNamespace, setSelectedNamespace] = useState<string | null>(null);
+  const [expandedNamespaces, setExpandedNamespaces] = useState<Record<string, boolean>>({});
   const [newKey, setNewKey] = useState("");
   const [newValue, setNewValue] = useState("");
   const [isSecure, setIsSecure] = useState(false);
@@ -35,6 +36,30 @@ export default function Parameters() {
   const toggleSecret = (id: number) => {
     setShowSecrets((prev) => ({ ...prev, [id]: !prev[id] }));
   };
+
+  const toggleNamespace = (namespace: string) => {
+    setExpandedNamespaces(prev => ({
+      ...prev,
+      [namespace]: !prev[namespace]
+    }));
+  };
+
+  const getBaseNamespace = (namespace: string) => {
+    return namespace.split('/')[0];
+  };
+
+  const getEnvironment = (namespace: string) => {
+    return namespace.split('/')[1];
+  };
+
+  const groupedNamespaces = Object.keys(data).reduce((acc, namespace) => {
+    const base = getBaseNamespace(namespace);
+    if (!acc[base]) {
+      acc[base] = [];
+    }
+    acc[base].push(namespace);
+    return acc;
+  }, {} as Record<string, string[]>);
 
   const addOrUpdateVariable = () => {
     if (selectedNamespace && newKey && newValue) {
@@ -104,10 +129,10 @@ export default function Parameters() {
         .filter(line => line.trim() && !line.startsWith('#'))
         .map(line => {
           const [key, ...valueParts] = line.split('=');
-          const value = valueParts.join('='); 
+          const value = valueParts.join('=');
           return {
             name: key.trim(),
-            value: value.trim().replace(/^["']|["']$/g, ''), 
+            value: value.trim().replace(/^["']|["']$/g, ''),
             isSecure: key.toLowerCase().includes('secret') || key.toLowerCase().includes('password'),
             environment: "development"
           };
@@ -130,8 +155,8 @@ export default function Parameters() {
       }
 
       apiClient.fetchNamespaces().then(setData);
-      toast({ 
-        title: `Import completed`, 
+      toast({
+        title: `Import completed`,
         description: `Created ${created} new parameters, updated ${updated} existing parameters.`
       });
 
@@ -153,10 +178,10 @@ export default function Parameters() {
         await apiClient.createNamespace(newNamespace);
         setNamespaceStep(2);
       } catch (error) {
-        toast({ 
-          title: "Failed to create namespace", 
+        toast({
+          title: "Failed to create namespace",
           description: error instanceof Error ? error.message : "Unknown error",
-          variant: "destructive" 
+          variant: "destructive"
         });
       }
     } else {
@@ -179,9 +204,9 @@ export default function Parameters() {
         resetNamespaceDialog();
         toast({ title: "Namespace created successfully" });
       } catch (error) {
-        toast({ 
-          title: "Failed to add initial variable", 
-          variant: "destructive" 
+        toast({
+          title: "Failed to add initial variable",
+          variant: "destructive"
         });
       }
     }
@@ -209,114 +234,134 @@ export default function Parameters() {
         </Button>
       </div>
 
-      <div className="flex gap-4 mt-4">
-        {Object.keys(data).map((namespace) => (
-          <Card
-            key={namespace}
-            onClick={() => setSelectedNamespace(namespace)}
-            className={`cursor-pointer hover:bg-accent ${
-              selectedNamespace === namespace ? "border-primary" : ""
-            }`}
-          >
-            <CardContent className="py-4">
-              <h3 className="text-lg font-semibold">{namespace}</h3>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {selectedNamespace && (
-        <div className="mt-4">
-          <Card>
-            <CardContent className="py-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-semibold">{selectedNamespace} Variables</h3>
-                <div className="flex gap-2">
-                  <input
-                    type="file"
-                    accept=".env"
-                    onChange={handleFileUpload}
-                    ref={fileInputRef}
-                    className="hidden"
-                  />
-                  <Button 
-                    onClick={() => fileInputRef.current?.click()} 
-                    size="sm"
-                    variant="outline"
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Import .env
-                  </Button>
-                  <Button onClick={() => {
-                    resetForm();
-                    setShowDialog(true);
-                  }} size="sm">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Variable
-                  </Button>
-                </div>
+      <div className="flex gap-4">
+        <div className="w-64 border-r pr-4">
+          {Object.entries(groupedNamespaces).map(([base, namespaces]) => (
+            <div key={base} className="mb-2">
+              <div
+                className="flex items-center gap-2 p-2 hover:bg-accent rounded cursor-pointer"
+                onClick={() => toggleNamespace(base)}
+              >
+                {expandedNamespaces[base] ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+                <span className="font-medium">{base}</span>
               </div>
-
-              <div className="space-y-2">
-                {data[selectedNamespace]?.map((param) => (
-                  <div
-                    key={param.id}
-                    className="flex items-center justify-between border-b p-2"
-                  >
-                    <div className="flex flex-col">
-                      <span className="font-medium">{param.name}</span>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge variant="secondary" className="text-xs">
-                          v{param.version || 1}
-                        </Badge>
-                        {param.isSecure && (
-                          <Badge variant="outline" className="text-xs">
-                            secure
-                          </Badge>
-                        )}
-                      </div>
+              {expandedNamespaces[base] && (
+                <div className="ml-6 space-y-1">
+                  {namespaces.map(namespace => (
+                    <div
+                      key={namespace}
+                      onClick={() => setSelectedNamespace(namespace)}
+                      className={`flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-accent ${
+                        selectedNamespace === namespace ? "bg-accent" : ""
+                      }`}
+                    >
+                      <Key className="h-4 w-4" />
+                      <span>{getEnvironment(namespace)}</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono">
-                        {param.isSecure && !showSecrets[param.id]
-                          ? "••••••••"
-                          : param.value}
-                      </span>
-                      {param.isSecure && (
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {selectedNamespace && (
+          <div className="flex-1">
+            <Card>
+              <CardContent className="py-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-xl font-semibold">{selectedNamespace} Variables</h3>
+                  <div className="flex gap-2">
+                    <input
+                      type="file"
+                      accept=".env"
+                      onChange={handleFileUpload}
+                      ref={fileInputRef}
+                      className="hidden"
+                    />
+                    <Button
+                      onClick={() => fileInputRef.current?.click()}
+                      size="sm"
+                      variant="outline"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Import .env
+                    </Button>
+                    <Button onClick={() => {
+                      resetForm();
+                      setShowDialog(true);
+                    }} size="sm">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Variable
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  {data[selectedNamespace]?.map((param) => (
+                    <div
+                      key={param.id}
+                      className="flex items-center justify-between border-b p-2"
+                    >
+                      <div className="flex flex-col">
+                        <span className="font-medium">{param.name}</span>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="secondary" className="text-xs">
+                            v{param.version || 1}
+                          </Badge>
+                          {param.isSecure && (
+                            <Badge variant="outline" className="text-xs">
+                              secure
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono">
+                          {param.isSecure && !showSecrets[param.id]
+                            ? "••••••••"
+                            : param.value}
+                        </span>
+                        {param.isSecure && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleSecret(param.id)}
+                          >
+                            {showSecrets[param.id] ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => toggleSecret(param.id)}
+                          onClick={() => startEditing(param)}
                         >
-                          {showSecrets[param.id] ? (
-                            <EyeOff className="h-4 w-4" />
-                          ) : (
-                            <Eye className="h-4 w-4" />
-                          )}
+                          <Pencil className="h-4 w-4" />
                         </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => startEditing(param)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => deleteVariable(param.name)}
-                      >
-                        <Trash className="h-4 w-4" />
-                      </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => deleteVariable(param.name)}
+                        >
+                          <Trash className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </div>
 
       <Dialog open={showDialog} onOpenChange={(open) => {
         if (!open) resetForm();
