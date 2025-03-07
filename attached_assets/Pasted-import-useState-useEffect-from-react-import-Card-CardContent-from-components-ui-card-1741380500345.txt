@@ -1,0 +1,141 @@
+import { useState, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Eye, EyeOff, Trash, Plus } from "lucide-react";
+
+// Mock API client with in-memory data
+const createMockApiClient = () => {
+  const store = {
+    "ortelius/dev": [
+      { name: "PORT", value: "3001", isSecured: false },
+      { name: "AWS_S3_SECRET_ACCESS_KEY", value: "supersecret", isSecured: true },
+    ],
+  };
+
+  return {
+    fetchNamespaces: async () => {
+      return new Promise((resolve) => setTimeout(() => resolve(store), 200));
+    },
+    addVariable: async (namespace, variable) => {
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          store[namespace] = store[namespace] || [];
+          store[namespace].push(variable);
+          resolve();
+        }, 200);
+      });
+    },
+    deleteVariable: async (namespace, paramName) => {
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          store[namespace] = store[namespace].filter((param) => param.name !== paramName);
+          resolve();
+        }, 200);
+      });
+    },
+  };
+};
+
+export default function AWSParamStoreUI({ apiClient = createMockApiClient() }) {
+  const [data, setData] = useState({});
+  const [selectedNamespace, setSelectedNamespace] = useState(null);
+  const [newKey, setNewKey] = useState("");
+  const [newValue, setNewValue] = useState("");
+  const [showDialog, setShowDialog] = useState(false);
+  const [showSecrets, setShowSecrets] = useState({});
+
+  useEffect(() => {
+    apiClient.fetchNamespaces().then(setData);
+  }, [apiClient]);
+
+  const toggleSecret = (key) => {
+    setShowSecrets((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const addVariable = () => {
+    if (selectedNamespace && newKey) {
+      const variable = { name: newKey, value: newValue, isSecured: newKey.toLowerCase().includes("secret") };
+      apiClient.addVariable(selectedNamespace, variable).then(() => {
+        setData((prev) => ({
+          ...prev,
+          [selectedNamespace]: [...(prev[selectedNamespace] || []), variable],
+        }));
+        setNewKey("");
+        setNewValue("");
+        setShowDialog(false);
+      });
+    }
+  };
+
+  const deleteVariable = (paramName) => {
+    apiClient.deleteVariable(selectedNamespace, paramName).then(() => {
+      setData((prev) => ({
+        ...prev,
+        [selectedNamespace]: prev[selectedNamespace].filter((param) => param.name !== paramName),
+      }));
+    });
+  };
+
+  return (
+    <div className="p-6">
+      <h2 className="text-2xl font-bold">AWS Parameter Store UI</h2>
+      <div className="flex gap-4 mt-4">
+        {Object.keys(data).map((namespace) => (
+          <Card
+            key={namespace}
+            onClick={() => setSelectedNamespace(namespace)}
+            className="cursor-pointer p-4 border hover:bg-gray-100"
+          >
+            <CardContent>
+              <h3 className="text-lg font-semibold">{namespace}</h3>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      {selectedNamespace && (
+        <div className="mt-4">
+          <h3 className="text-xl font-semibold">{selectedNamespace} Variables</h3>
+          <div className="border p-4 rounded-md mt-2">
+            {data[selectedNamespace]?.map(({ name, value, isSecured }) => (
+              <div key={name} className="flex items-center justify-between border-b p-2">
+                <span>{name}</span>
+                <div className="flex items-center gap-2">
+                  {showSecrets[name] || !isSecured ? (
+                    <span>{value}</span>
+                  ) : (
+                    <span>******</span>
+                  )}
+                  {isSecured && (
+                    <Button size="icon" onClick={() => toggleSecret(name)} variant="ghost">
+                      {showSecrets[name] ? <EyeOff /> : <Eye />}
+                    </Button>
+                  )}
+                  <Button size="icon" variant="ghost" onClick={() => deleteVariable(name)}>
+                    <Trash />
+                  </Button>
+                </div>
+              </div>
+            ))}
+            <Button onClick={() => setShowDialog(true)} className="mt-2 flex items-center gap-2">
+              <Plus /> Add Variable
+            </Button>
+          </div>
+        </div>
+      )}
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Environment Variable</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input placeholder="Key" value={newKey} onChange={(e) => setNewKey(e.target.value)} />
+            <Input placeholder="Value" value={newValue} onChange={(e) => setNewValue(e.target.value)} />
+            <Button onClick={addVariable}>Save</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
