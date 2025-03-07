@@ -7,8 +7,8 @@ interface Store {
 export const createMockApiClient = () => {
   const store: Store = {
     "ortelius/dev": [
-      { id: 1, name: "PORT", value: "3001", isSecure: false, environment: "development", version: 1 },
-      { id: 2, name: "AWS_S3_SECRET_ACCESS_KEY", value: "supersecret", isSecure: true, environment: "development", version: 3 },
+      { id: 1, name: "PORT", value: "3001", isSecure: false, version: 1 },
+      { id: 2, name: "AWS_S3_SECRET_ACCESS_KEY", value: "supersecret", isSecure: true, version: 3 },
     ],
   };
 

@@ -7,19 +7,16 @@ export const parameters = pgTable("parameters", {
   name: text("name").notNull(),
   value: text("value").notNull(),
   isSecure: boolean("is_secure").notNull().default(false),
-  environment: text("environment").notNull(),
   version: integer("version").notNull().default(1),
 });
 
 export const insertParameterSchema = createInsertSchema(parameters).pick({
   name: true,
   value: true,
-  isSecure: true,
-  environment: true,
+  isSecure: true
 }).extend({
   name: z.string().min(1, "Name is required"),
-  value: z.string().min(1, "Value is required"),
-  environment: z.enum(["development", "production"]),
+  value: z.string().min(1, "Value is required")
 });
 
 export type InsertParameter = z.infer<typeof insertParameterSchema>;

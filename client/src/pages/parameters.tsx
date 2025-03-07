@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import type { Parameter } from "@shared/schema";
-import { createMockApiClient, type MockApiClient } from "@/lib/mockApiClient";
+import { createApiClient } from "@/lib/apiClient";
 
 export default function Parameters() {
   const [data, setData] = useState<Record<string, Parameter[]>>({});
@@ -18,9 +18,16 @@ export default function Parameters() {
   const [newValue, setNewValue] = useState("");
   const [isSecure, setIsSecure] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
-  const [showSecrets, setShowSecrets] = useState<Record<number, boolean>>({});
+  const [showSecrets, setShowSecrets] = useState<Set<number>>(new Set());
   const [editingParameter, setEditingParameter] = useState<Parameter | null>(null);
-  const [apiClient] = useState<MockApiClient>(() => createMockApiClient());
+  const [apiClient] = useState(() => createApiClient(
+    import.meta.env.VITE_AWS_API_URL && import.meta.env.VITE_AWS_REGION 
+      ? {
+          baseUrl: import.meta.env.VITE_AWS_API_URL,
+          region: import.meta.env.VITE_AWS_REGION,
+        }
+      : undefined
+  ));
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showNamespaceDialog, setShowNamespaceDialog] = useState(false);
   const [newNamespace, setNewNamespace] = useState("");
@@ -32,7 +39,15 @@ export default function Parameters() {
   }, [apiClient]);
 
   const toggleSecret = (id: number) => {
-    setShowSecrets((prev) => ({ ...prev, [id]: !prev[id] }));
+    setShowSecrets((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
   };
 
   const toggleNamespace = (namespace: string) => {
@@ -65,13 +80,12 @@ export default function Parameters() {
         name: newKey,
         value: newValue,
         isSecure,
-        environment: "development",
       };
 
       const existingParam = editingParameter || data[selectedNamespace]?.find(p => p.name === newKey);
 
       if (existingParam) {
-        apiClient.updateVariable(selectedNamespace, existingParam.name, variable).then(() => {
+        apiClient.updateVariable(selectedNamespace, existingParameter.name, variable).then(() => {
           apiClient.fetchNamespaces().then(setData);
           resetForm();
           setShowDialog(false);
@@ -131,8 +145,7 @@ export default function Parameters() {
           return {
             name: key.trim(),
             value: value.trim().replace(/^["']|["']$/g, ''),
-            isSecure: key.toLowerCase().includes('secret') || key.toLowerCase().includes('password'),
-            environment: "development"
+            isSecure: key.toLowerCase().includes('secret') || key.toLowerCase().includes('password')
           };
         });
 
@@ -180,8 +193,7 @@ export default function Parameters() {
       const variable = {
         name: newKey,
         value: newValue,
-        isSecure,
-        environment: "development",
+        isSecure
       };
 
       await apiClient.createNamespaceWithVariable(newNamespace, variable);
@@ -307,7 +319,7 @@ export default function Parameters() {
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="font-mono">
-                          {param.isSecure && !showSecrets[param.id]
+                          {param.isSecure && !showSecrets.has(param.id)
                             ? "••••••••"
                             : param.value}
                         </span>
@@ -317,7 +329,7 @@ export default function Parameters() {
                             size="sm"
                             onClick={() => toggleSecret(param.id)}
                           >
-                            {showSecrets[param.id] ? (
+                            {showSecrets.has(param.id) ? (
                               <EyeOff className="h-4 w-4" />
                             ) : (
                               <Eye className="h-4 w-4" />
@@ -384,6 +396,7 @@ export default function Parameters() {
           </div>
         </DialogContent>
       </Dialog>
+
       <Dialog open={showNamespaceDialog} onOpenChange={(open) => {
         if (!open) resetNamespaceDialog();
         setShowNamespaceDialog(open);
