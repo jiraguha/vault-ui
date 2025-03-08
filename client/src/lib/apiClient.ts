@@ -26,7 +26,6 @@ export class AWSApiClient implements ApiClient {
 
       const response = await fetch(url, {
         ...options,
-        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           ...(options?.headers || {})
@@ -52,7 +51,7 @@ export class AWSApiClient implements ApiClient {
       const response = await this.makeRequest('/api/parameters');
       return await response.json();
     } catch (error) {
-      console.error('Error fetching parameters:', error);
+      console.error('Failed to fetch parameters:', error);
       throw error;
     }
   }

@@ -33,10 +33,9 @@ const app = express();
 
 // CORS configuration must come before any routes
 app.use(cors({
-  origin: [/\.repl\.co$/, /\.replit\.dev$/, 'http://localhost:5000', 'http://localhost:3000'],
+  origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true,
   optionsSuccessStatus: 204
 }));
 
