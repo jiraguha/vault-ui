@@ -92,8 +92,18 @@ export class AWSApiClient implements ApiClient {
 }
 
 export function createApiClient(config?: { baseUrl: string; region: string }): ApiClient {
-  if (config) {
+  // Log configuration for debugging
+  console.log('AWS Config:', {
+    provided: !!config,
+    baseUrl: config?.baseUrl || 'not provided',
+    region: config?.region || 'not provided'
+  });
+
+  if (config?.baseUrl && config?.region) {
+    console.log('Using AWS API Client');
     return new AWSApiClient(config.baseUrl, config.region);
   }
+
+  console.log('Falling back to Mock API Client');
   return createMockApiClient();
 }
