@@ -43,7 +43,7 @@ export async function registerRoutes(app: Express, ssmClient: SSMClient): Promis
         }
 
         parametersByNamespace[namespace].push({
-          id: Date.now(), // Use timestamp as ID
+          id: paramName, // Use timestamp as ID
           name: paramName,
           value: param.Value || '',
           isSecure: param.Type === 'SecureString',
@@ -61,7 +61,7 @@ export async function registerRoutes(app: Express, ssmClient: SSMClient): Promis
     } catch (error) {
       console.error('Error fetching parameters:', error);
       if (error instanceof Error) {
-        console.error('Error details:', {
+        console.error('Error details :', {
           name: error.name,
           message: error.message,
           stack: error.stack,
@@ -75,7 +75,7 @@ export async function registerRoutes(app: Express, ssmClient: SSMClient): Promis
   // Create a new parameter
   app.post("/api/parameters/:namespace/variables", async (req, res) => {
     try {
-      const { namespace } = req.params;
+      const namespace = decodeURIComponent(req.params.namespace);
       const { name, value, isSecure } = req.body;
       console.log(`Creating parameter in namespace ${namespace}:`, { name, isSecure });
 
@@ -84,7 +84,7 @@ export async function registerRoutes(app: Express, ssmClient: SSMClient): Promis
       }
 
       const command = new PutParameterCommand({
-        Name: `/ortelius/${namespace}/${name}`,  // Add /ortelius prefix
+        Name: `/${namespace}/${name}`,
         Value: value,
         Type: isSecure ? 'SecureString' : 'String',
         Overwrite: false,
@@ -104,21 +104,22 @@ export async function registerRoutes(app: Express, ssmClient: SSMClient): Promis
     try {
       const { namespace, name } = req.params;
       const { value, isSecure } = req.body;
-      console.log(`Updating parameter: /${namespace}/${name}`);
+      const decodedNamespace = decodeURIComponent(namespace);
+      console.log(`Updating parameter: /${decodedNamespace}/${name}`);
 
       if (!value) {
         return res.status(400).json({ message: "Value is required" });
       }
 
       const command = new PutParameterCommand({
-        Name: `/ortelius/${namespace}/${name}`,  // Add /ortelius prefix
+        Name: `/${decodedNamespace}/${name}`,  // Add /ortelius prefix
         Value: value,
         Type: isSecure ? 'SecureString' : 'String',
         Overwrite: true,
       });
 
       await ssmClient.send(command);
-      console.log(`Parameter updated successfully: /${namespace}/${name}`);
+      console.log(`Parameter updated successfully: /${decodedNamespace}/${name}`);
       res.json({ message: "Parameter updated" });
     } catch (error) {
       console.error('Error updating parameter:', error);
@@ -130,14 +131,15 @@ export async function registerRoutes(app: Express, ssmClient: SSMClient): Promis
   app.delete("/api/parameters/:namespace/variables/:name", async (req, res) => {
     try {
       const { namespace, name } = req.params;
-      console.log(`Deleting parameter: /${namespace}/${name}`);
+      const decodedNamespace = decodeURIComponent(namespace);
+      console.log(`Deleting parameter: /${decodedNamespace}/${name}`);
 
       const command = new DeleteParameterCommand({
-        Name: `/ortelius/${namespace}/${name}`,  // Add /ortelius prefix
+        Name: `/${decodedNamespace}/${name}`,  // Add /ortelius prefix
       });
 
       await ssmClient.send(command);
-      console.log(`Parameter deleted successfully: /${namespace}/${name}`);
+      console.log(`Parameter deleted successfully: /${decodedNamespace}/${name}`);
       res.status(204).end();
     } catch (error) {
       console.error('Error deleting parameter:', error);

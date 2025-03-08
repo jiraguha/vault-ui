@@ -19,7 +19,7 @@ console.log('AWS Configuration:', {
 });
 
 console.log('Creating AWS SSM client...');
-const ssmClient = new SSMClient({ 
+const ssmClient = new SSMClient({
   region,
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
@@ -97,12 +97,10 @@ app.use((req, res, next) => {
   } else {
     serveStatic(app);
   }
-
+  console.log('Server yo');
   const port = 5000;
   server.listen({
     port,
-    host: "0.0.0.0",
-    reusePort: true,
   }, () => {
     console.log('AWS Environment:', {
       region: process.env.AWS_REGION || 'eu-west-3',

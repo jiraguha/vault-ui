@@ -8,16 +8,15 @@ export interface ApiClient {
   deleteVariable: (namespace: string, paramName: string) => Promise<void>;
   updateVariable: (namespace: string, paramName: string, updates: Partial<Parameter>) => Promise<void>;
 }
-
 export class AWSApiClient implements ApiClient {
   private readonly baseUrl: string;
-
   constructor(baseUrl: string) {
     if (!baseUrl) {
       throw new Error("AWS API client requires baseUrl");
     }
     this.baseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
   }
+
 
   private async makeRequest(path: string, options?: RequestInit) {
     try {
@@ -57,28 +56,32 @@ export class AWSApiClient implements ApiClient {
   }
 
   async createNamespaceWithVariable(namespace: string, variable: Omit<Parameter, "id" | "version">): Promise<void> {
-    await this.makeRequest(`/api/parameters/${namespace}/variables`, {
+    const encodedNamespace = encodeURIComponent(namespace);
+    await this.makeRequest(`/api/parameters/${encodedNamespace}/variables`, {
       method: 'POST',
       body: JSON.stringify(variable),
     });
   }
 
   async addVariable(namespace: string, variable: Omit<Parameter, "id" | "version">): Promise<void> {
-    await this.makeRequest(`/api/parameters/${namespace}/variables`, {
+    const encodedNamespace = encodeURIComponent(namespace);
+    await this.makeRequest(`/api/parameters/${encodedNamespace}/variables`, {
       method: 'POST',
       body: JSON.stringify(variable),
     });
   }
 
   async updateVariable(namespace: string, paramName: string, updates: Partial<Parameter>): Promise<void> {
-    await this.makeRequest(`/api/parameters/${namespace}/variables/${paramName}`, {
+    const encodedNamespace = encodeURIComponent(namespace);
+    await this.makeRequest(`/api/parameters/${encodedNamespace}/variables/${paramName}`, {
       method: 'PATCH',
       body: JSON.stringify(updates),
     });
   }
 
   async deleteVariable(namespace: string, paramName: string): Promise<void> {
-    await this.makeRequest(`/api/parameters/${namespace}/variables/${paramName}`, {
+    const encodedNamespace = encodeURIComponent(namespace);
+    await this.makeRequest(`/api/parameters/${encodedNamespace}/variables/${paramName}`, {
       method: 'DELETE',
     });
   }

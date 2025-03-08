@@ -18,6 +18,7 @@ export const createMockApiClient = () => {
 
   return {
     fetchNamespaces: async () => {
+      console.log("fetchNamespaces");
       return new Promise<Store>((resolve) => setTimeout(() => resolve(store), 200));
     },
     createNamespaceWithVariable: async (namespace: string, variable: Omit<Parameter, "id" | "version">) => {
