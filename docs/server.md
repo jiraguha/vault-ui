@@ -2,7 +2,7 @@
 
 ## Overview
 
-The server component provides the API endpoints for the AWS Parameter Store UI. It handles requests from the client application and interacts with the AWS Systems Manager Parameter Store service.
+The server component provides the API endpoints for the Vault UI. It handles requests from the client application and interacts with the AWS Systems Manager Parameter Store service.
 
 ## Architecture
 

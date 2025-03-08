@@ -1,12 +1,15 @@
-# AWS Parameter Store UI
+# Vault-ui
+
+#### AWS Parameter Store UI
 
 **Stop wasting time with command-line tools. Manage your AWS Parameter Store securely and efficiently through our intuitive interface.**
 
-A web application for managing AWS SSM Parameter Store parameters through an intuitive user interface.
 
+![img_1.png](img_1.png)
 ## Overview
 
 This application provides a user-friendly interface for creating, viewing, updating, and deleting parameters in AWS Systems Manager Parameter Store. It organizes parameters by namespaces in a hierarchical view, making it easier to manage large sets of configuration values across different environments.
+
 ## Features
 
 - **Parameter Management**: Create, read, update, and delete parameters
@@ -19,7 +22,7 @@ This application provides a user-friendly interface for creating, viewing, updat
 
 ### Start Now with Docker/Podman
 
-You can also run the application using Docker:
+Just run the application using Docker/Podman:
 
 ```bash
 docker run --rm \

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The client application is a React-based frontend for the AWS Parameter Store UI. It provides an intuitive user interface for managing AWS SSM parameters through a web browser.
+The client application is a React-based frontend for the Vault UI. It provides an intuitive user interface for managing AWS SSM parameters through a web browser.
 
 ## Architecture
 

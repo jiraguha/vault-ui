@@ -27,6 +27,7 @@ d-push:
 
 d-push:
 	$(eval VERSION := $(if $(version),$(version),latest))
+	    npm install && npm run build && \
 		docker build -t vault-ui . && \
 		docker tag vault-ui:latest jpiraguha/vault-ui:$(VERSION) && \
 		docker push jpiraguha/vault-ui:$(VERSION)

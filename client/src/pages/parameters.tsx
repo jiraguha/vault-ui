@@ -274,7 +274,7 @@ export default function Parameters() {
     <div className="p-6">
       <div className="flex items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-3">
-          <h2 className="text-2xl font-bold">AWS Parameter Store UI</h2>
+          <h2 className="text-2xl font-bold">Vault UI</h2>
           <Badge variant="outline">v1.0.0</Badge>
         </div>
         <Button onClick={() => setShowNamespaceDialog(true)} size="sm">

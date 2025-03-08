@@ -80,7 +80,7 @@ export default function AWSParamStoreUI({ apiClient = createMockApiClient() }) {
 
   return (
     <div className="p-6">
-      <h2 className="text-2xl font-bold">AWS Parameter Store UI</h2>
+      <h2 className="text-2xl font-bold">Vault UI</h2>
       <div className="flex gap-4 mt-4">
         {Object.keys(data).map((namespace) => (
           <Card

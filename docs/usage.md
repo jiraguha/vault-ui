@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This guide explains how to use the AWS Parameter Store UI to manage your application parameters in AWS Systems Manager Parameter Store.
+This guide explains how to use the Vault UI to manage your application parameters in AWS Systems Manager Parameter Store.
 
 ## Getting Started
 
