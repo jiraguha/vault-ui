@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,8 +20,11 @@ export default function Parameters() {
   const [showDialog, setShowDialog] = useState(false);
   const [showSecrets, setShowSecrets] = useState<Set<number>>(new Set());
   const [editingParameter, setEditingParameter] = useState<Parameter | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [showNamespaceDialog, setShowNamespaceDialog] = useState(false);
+  const [newNamespace, setNewNamespace] = useState("");
+
   const [apiClient] = useState(() => {
-    // Log environment variables for debugging
     console.log('Environment variables:', {
       baseUrl: import.meta.env.VITE_AWS_API_URL
     });
@@ -34,15 +37,28 @@ export default function Parameters() {
         : undefined
     );
   });
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [showNamespaceDialog, setShowNamespaceDialog] = useState(false);
-  const [newNamespace, setNewNamespace] = useState("");
 
   const { toast } = useToast();
 
   useEffect(() => {
-    apiClient.fetchNamespaces().then(setData);
-  }, [apiClient]);
+    const fetchData = async () => {
+      try {
+        setError(null);
+        const result = await apiClient.fetchNamespaces();
+        setData(result);
+      } catch (err) {
+        console.error('Failed to fetch parameters:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch parameters');
+        toast({ 
+          title: "Error fetching parameters",
+          description: err instanceof Error ? err.message : 'Unknown error',
+          variant: "destructive"
+        });
+      }
+    };
+
+    fetchData();
+  }, [apiClient, toast]);
 
   const toggleSecret = (id: number) => {
     setShowSecrets((prev) => {
@@ -176,10 +192,6 @@ export default function Parameters() {
         title: `Import completed`,
         description: `Created ${created} new parameters, updated ${updated} existing parameters.`
       });
-
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
     };
 
     reader.readAsText(file);
@@ -283,11 +295,10 @@ export default function Parameters() {
                       type="file"
                       accept=".env"
                       onChange={handleFileUpload}
-                      ref={fileInputRef}
                       className="hidden"
                     />
                     <Button
-                      onClick={() => fileInputRef.current?.click()}
+                      onClick={() => document.querySelector('input[type="file"]').click()}
                       size="sm"
                       variant="outline"
                     >

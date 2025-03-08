@@ -19,17 +19,28 @@ export class AWSApiClient implements ApiClient {
     this.baseUrl = baseUrl;
   }
 
-  async fetchNamespaces(): Promise<Record<string, Parameter[]>> {
+  private async makeRequest(path: string, options?: RequestInit) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/parameters`);
+      const response = await fetch(`${this.baseUrl}${path}`, options);
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({ message: response.statusText }));
-        throw new Error(`Failed to fetch parameters: ${error.message}`);
+        throw new Error(error.message || 'Network request failed');
       }
 
-      const parameters = await response.json();
-      return parameters;
+      return response;
+    } catch (error) {
+      if (error instanceof TypeError && error.message === 'Failed to fetch') {
+        throw new Error(`Cannot connect to server at ${this.baseUrl}. Please check if the server is running.`);
+      }
+      throw error;
+    }
+  }
+
+  async fetchNamespaces(): Promise<Record<string, Parameter[]>> {
+    try {
+      const response = await this.makeRequest('/api/parameters');
+      return await response.json();
     } catch (error) {
       console.error('Error fetching parameters:', error);
       throw error;
@@ -37,64 +48,43 @@ export class AWSApiClient implements ApiClient {
   }
 
   async createNamespaceWithVariable(namespace: string, variable: Omit<Parameter, "id" | "version">): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/api/parameters/${namespace}/variables`, {
+    await this.makeRequest(`/api/parameters/${namespace}/variables`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(variable),
     });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: response.statusText }));
-      throw new Error(`Failed to create namespace: ${error.message}`);
-    }
   }
 
   async addVariable(namespace: string, variable: Omit<Parameter, "id" | "version">): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/api/parameters/${namespace}/variables`, {
+    await this.makeRequest(`/api/parameters/${namespace}/variables`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(variable),
     });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: response.statusText }));
-      throw new Error(`Failed to add variable: ${error.message}`);
-    }
   }
 
   async updateVariable(namespace: string, paramName: string, updates: Partial<Parameter>): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/api/parameters/${namespace}/variables/${paramName}`, {
+    await this.makeRequest(`/api/parameters/${namespace}/variables/${paramName}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(updates),
     });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: response.statusText }));
-      throw new Error(`Failed to update variable: ${error.message}`);
-    }
   }
 
   async deleteVariable(namespace: string, paramName: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/api/parameters/${namespace}/variables/${paramName}`, {
+    await this.makeRequest(`/api/parameters/${namespace}/variables/${paramName}`, {
       method: 'DELETE',
     });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: response.statusText }));
-      throw new Error(`Failed to delete variable: ${error.message}`);
-    }
   }
 }
 
 export function createApiClient(config?: { baseUrl: string }): ApiClient {
-  // Log configuration for debugging
   console.log('AWS Config:', {
     provided: !!config,
     baseUrl: config?.baseUrl || 'not provided'
