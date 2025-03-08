@@ -2,16 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { SSMClient, GetParametersByPathCommand, PutParameterCommand, DeleteParameterCommand } from "@aws-sdk/client-ssm";
 
-// Create a single SSM client instance
-const ssmClient = new SSMClient({ 
-  region: process.env.AWS_REGION || 'eu-west-3',
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || ''
-  }
-});
-
-export async function registerRoutes(app: Express): Promise<Server> {
+export async function registerRoutes(app: Express, ssmClient: SSMClient): Promise<Server> {
   // Get all parameters
   app.get("/api/parameters", async (_req, res) => {
     try {
@@ -52,7 +43,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(parametersByNamespace);
     } catch (error) {
       console.error('Error fetching parameters:', error);
-      res.status(500).json({ message: "Failed to fetch parameters" });
+      res.status(500).json({ message: error instanceof Error ? error.message : "Failed to fetch parameters" });
     }
   });
 
@@ -77,7 +68,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json({ message: "Parameter created" });
     } catch (error) {
       console.error('Error creating parameter:', error);
-      res.status(500).json({ message: "Failed to create parameter" });
+      res.status(500).json({ message: error instanceof Error ? error.message : "Failed to create parameter" });
     }
   });
 
@@ -102,7 +93,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Parameter updated" });
     } catch (error) {
       console.error('Error updating parameter:', error);
-      res.status(500).json({ message: "Failed to update parameter" });
+      res.status(500).json({ message: error instanceof Error ? error.message : "Failed to update parameter" });
     }
   });
 
@@ -119,7 +110,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).end();
     } catch (error) {
       console.error('Error deleting parameter:', error);
-      res.status(500).json({ message: "Failed to delete parameter" });
+      res.status(500).json({ message: error instanceof Error ? error.message : "Failed to delete parameter" });
     }
   });
 
