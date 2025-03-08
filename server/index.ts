@@ -30,16 +30,18 @@ const ssmClient = new SSMClient({
 console.log('AWS SSM client created successfully');
 
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
 
-// Configure CORS
+// CORS configuration must come before any routes
 app.use(cors({
-  origin: true, // Allow requests from any origin
+  origin: [/\.repl\.co$/, /\.replit\.dev$/, 'http://localhost:5000', 'http://localhost:3000'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
+  credentials: true,
+  optionsSuccessStatus: 204
 }));
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 
 // Add logging middleware
 app.use((req, res, next) => {
