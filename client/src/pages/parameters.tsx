@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Eye, EyeOff, Trash, Plus, Pencil, Upload, ChevronDown, ChevronRight, Key } from "lucide-react";
+import { Eye, EyeOff, Trash, Plus, Pencil, Upload, Download, ChevronDown, ChevronRight, Key } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -23,6 +23,8 @@ export default function Parameters() {
   const [error, setError] = useState<string | null>(null);
   const [showNamespaceDialog, setShowNamespaceDialog] = useState(false);
   const [newNamespace, setNewNamespace] = useState("");
+  const [showDownloadDialog, setShowDownloadDialog] = useState(false);
+  const [downloadFilename, setDownloadFilename] = useState("");
 
   const [apiClient] = useState(() => {
     console.log('Environment variables:', {
@@ -237,6 +239,37 @@ export default function Parameters() {
     setShowNamespaceDialog(false);
   };
 
+  const downloadEnvFile = () => {
+    if (!selectedNamespace || !data[selectedNamespace]) return;
+
+    // Set default filename
+    setDownloadFilename(`${selectedNamespace.replace('/', '-')}.env`);
+    setShowDownloadDialog(true);
+  };
+
+  const handleDownload = () => {
+    if (!selectedNamespace || !data[selectedNamespace]) return;
+
+    const envContent = data[selectedNamespace]
+      .map(param => {
+        const value = param.value.includes(' ') ? `"${param.value}"` : param.value;
+        return `${param.name}=${value}`;
+      })
+      .join('\n');
+
+    const blob = new Blob([envContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = downloadFilename.endsWith('.env') ? downloadFilename : `${downloadFilename}.env`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setShowDownloadDialog(false);
+  };
+
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between gap-3 mb-4">
@@ -304,14 +337,23 @@ export default function Parameters() {
                       accept=".env"
                       onChange={handleFileUpload}
                       className="hidden"
+                      id="file-upload"
                     />
                     <Button
-                      onClick={() => document.querySelector('input[type="file"]').click()}
+                      onClick={() => document.getElementById('file-upload')?.click()}
                       size="sm"
                       variant="outline"
                     >
                       <Upload className="h-4 w-4 mr-2" />
                       Import .env
+                    </Button>
+                    <Button
+                      onClick={downloadEnvFile}
+                      size="sm"
+                      variant="outline"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download .env
                     </Button>
                     <Button onClick={() => {
                       resetForm();
@@ -460,6 +502,33 @@ export default function Parameters() {
               </Button>
               <Button onClick={createNamespace}>
                 Create Namespace
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Download Dialog */}
+      <Dialog open={showDownloadDialog} onOpenChange={setShowDownloadDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Download Environment Variables</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Filename</label>
+              <Input
+                value={downloadFilename}
+                onChange={(e) => setDownloadFilename(e.target.value)}
+                placeholder="myapp-dev.env"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowDownloadDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleDownload}>
+                Download
               </Button>
             </div>
           </div>

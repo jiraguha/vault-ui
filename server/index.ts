@@ -97,7 +97,6 @@ app.use((req, res, next) => {
   } else {
     serveStatic(app);
   }
-  console.log('Server yo');
   const port = 5000;
   server.listen({
     port,
