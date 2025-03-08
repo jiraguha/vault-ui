@@ -21,7 +21,17 @@ export class AWSApiClient implements ApiClient {
 
   private async makeRequest(path: string, options?: RequestInit) {
     try {
-      const response = await fetch(`${this.baseUrl}${path}`, options);
+      const url = `${this.baseUrl}${path}`;
+      console.log('Making request to:', url);
+
+      const response = await fetch(url, {
+        ...options,
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(options?.headers || {})
+        }
+      });
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({ message: response.statusText }));
@@ -50,9 +60,6 @@ export class AWSApiClient implements ApiClient {
   async createNamespaceWithVariable(namespace: string, variable: Omit<Parameter, "id" | "version">): Promise<void> {
     await this.makeRequest(`/api/parameters/${namespace}/variables`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(variable),
     });
   }
@@ -60,9 +67,6 @@ export class AWSApiClient implements ApiClient {
   async addVariable(namespace: string, variable: Omit<Parameter, "id" | "version">): Promise<void> {
     await this.makeRequest(`/api/parameters/${namespace}/variables`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(variable),
     });
   }
@@ -70,9 +74,6 @@ export class AWSApiClient implements ApiClient {
   async updateVariable(namespace: string, paramName: string, updates: Partial<Parameter>): Promise<void> {
     await this.makeRequest(`/api/parameters/${namespace}/variables/${paramName}`, {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(updates),
     });
   }
