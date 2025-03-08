@@ -21,7 +21,7 @@ export default function Parameters() {
   const [showSecrets, setShowSecrets] = useState<Set<number>>(new Set());
   const [editingParameter, setEditingParameter] = useState<Parameter | null>(null);
   const [apiClient] = useState(() => {
-    // Log environment variables
+    // Log environment variables for debugging
     console.log('Environment variables:', {
       baseUrl: import.meta.env.VITE_AWS_API_URL,
       region: import.meta.env.VITE_AWS_REGION
