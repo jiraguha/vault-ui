@@ -48,10 +48,11 @@ export default function Parameters() {
         setData(result);
       } catch (err) {
         console.error('Failed to fetch parameters:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch parameters');
+        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch parameters';
+        setError(errorMessage);
         toast({ 
           title: "Error fetching parameters",
-          description: err instanceof Error ? err.message : 'Unknown error',
+          description: errorMessage,
           variant: "destructive"
         });
       }
@@ -248,6 +249,13 @@ export default function Parameters() {
           Create Namespace
         </Button>
       </div>
+
+      {error && (
+        <div className="bg-destructive/15 border border-destructive text-destructive px-4 py-3 rounded-md mb-4">
+          <p className="font-medium">Error</p>
+          <p className="text-sm">{error}</p>
+        </div>
+      )}
 
       <div className="flex gap-4">
         <div className="w-64 border-r pr-4">
