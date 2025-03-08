@@ -9,8 +9,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use((req, res, next) => {
     const region = req.headers['x-aws-region'];
     if (region && typeof region === 'string') {
+      console.log('Creating SSM client with region:', region);
       const ssm = new SSMClient({ region });
       (req as any).ssm = ssm;
+    } else {
+      console.log('No AWS region provided, falling back to in-memory storage');
     }
     next();
   });
@@ -20,9 +23,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { namespace } = req.params;
       const ssm = (req as any).ssm;
+      console.log(`Fetching parameters for namespace: ${namespace}`);
 
       if (!ssm) {
-        // Fall back to in-memory storage if no AWS configuration
+        console.log('Using in-memory storage');
         const parameters = await storage.getParameters(namespace);
         return res.json(parameters);
       }
@@ -33,6 +37,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         WithDecryption: true,
       });
 
+      console.log('Sending AWS SSM request');
       const response = await ssm.send(command);
       const parameters = response.Parameters?.map(param => ({
         id: Date.now(), // Use timestamp as ID
@@ -44,6 +49,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(parameters);
     } catch (error) {
+      console.error('Error fetching parameters:', error);
       res.status(500).json({ message: "Failed to fetch parameters" });
     }
   });
@@ -74,6 +80,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await ssm.send(command);
       res.status(201).json({ message: "Parameter created" });
     } catch (error) {
+      console.error('Error creating parameter:', error);
       res.status(500).json({ message: "Failed to create parameter" });
     }
   });
@@ -108,6 +115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await ssm.send(command);
       res.json({ message: "Parameter updated" });
     } catch (error) {
+      console.error('Error updating parameter:', error);
       res.status(500).json({ message: "Failed to update parameter" });
     }
   });
@@ -134,6 +142,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await ssm.send(command);
       res.status(204).end();
     } catch (error) {
+      console.error('Error deleting parameter:', error);
       res.status(500).json({ message: "Failed to delete parameter" });
     }
   });

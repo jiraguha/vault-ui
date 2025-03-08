@@ -19,21 +19,34 @@ export class AWSApiClient implements ApiClient {
   }
 
   async fetchNamespaces(): Promise<Record<string, Parameter[]>> {
-    const response = await fetch(`${this.baseUrl}/api/parameters`, {
-      headers: {
-        'x-aws-region': this.region,
-      },
-    });
+    try {
+      const namespaces = ['ortelius/dev', 'ortelius/prod'];
+      const result: Record<string, Parameter[]> = {};
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch namespaces: ${response.statusText}`);
+      for (const namespace of namespaces) {
+        const response = await fetch(`${this.baseUrl}/api/parameters/${namespace}`, {
+          headers: {
+            'x-aws-region': this.region,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch namespace ${namespace}: ${response.statusText}`);
+        }
+
+        const parameters = await response.json();
+        result[namespace] = parameters;
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error fetching namespaces:', error);
+      throw error;
     }
-
-    return response.json();
   }
 
   async createNamespaceWithVariable(namespace: string, variable: Omit<Parameter, "id" | "version">): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/api/parameters/${namespace}`, {
+    const response = await fetch(`${this.baseUrl}/api/parameters/${namespace}/variables`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
