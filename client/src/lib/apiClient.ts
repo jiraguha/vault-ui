@@ -11,11 +11,12 @@ export interface ApiClient {
 
 export class AWSApiClient implements ApiClient {
   private readonly baseUrl: string;
-  private readonly region: string;
 
-  constructor(baseUrl: string, region: string) {
+  constructor(baseUrl: string) {
+    if (!baseUrl) {
+      throw new Error("AWS API client requires baseUrl");
+    }
     this.baseUrl = baseUrl;
-    this.region = region;
   }
 
   async fetchNamespaces(): Promise<Record<string, Parameter[]>> {
@@ -24,14 +25,11 @@ export class AWSApiClient implements ApiClient {
       const result: Record<string, Parameter[]> = {};
 
       for (const namespace of namespaces) {
-        const response = await fetch(`${this.baseUrl}/api/parameters/${namespace}`, {
-          headers: {
-            'x-aws-region': this.region,
-          },
-        });
+        const response = await fetch(`${this.baseUrl}/api/parameters/${namespace}`);
 
         if (!response.ok) {
-          throw new Error(`Failed to fetch namespace ${namespace}: ${response.statusText}`);
+          const error = await response.json().catch(() => ({ message: response.statusText }));
+          throw new Error(`Failed to fetch namespace ${namespace}: ${error.message}`);
         }
 
         const parameters = await response.json();
@@ -50,13 +48,13 @@ export class AWSApiClient implements ApiClient {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-aws-region': this.region,
       },
       body: JSON.stringify(variable),
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to create namespace: ${response.statusText}`);
+      const error = await response.json().catch(() => ({ message: response.statusText }));
+      throw new Error(`Failed to create namespace: ${error.message}`);
     }
   }
 
@@ -65,13 +63,13 @@ export class AWSApiClient implements ApiClient {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-aws-region': this.region,
       },
       body: JSON.stringify(variable),
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to add variable: ${response.statusText}`);
+      const error = await response.json().catch(() => ({ message: response.statusText }));
+      throw new Error(`Failed to add variable: ${error.message}`);
     }
   }
 
@@ -80,43 +78,40 @@ export class AWSApiClient implements ApiClient {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        'x-aws-region': this.region,
       },
       body: JSON.stringify(updates),
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to update variable: ${response.statusText}`);
+      const error = await response.json().catch(() => ({ message: response.statusText }));
+      throw new Error(`Failed to update variable: ${error.message}`);
     }
   }
 
   async deleteVariable(namespace: string, paramName: string): Promise<void> {
     const response = await fetch(`${this.baseUrl}/api/parameters/${namespace}/variables/${paramName}`, {
       method: 'DELETE',
-      headers: {
-        'x-aws-region': this.region,
-      },
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to delete variable: ${response.statusText}`);
+      const error = await response.json().catch(() => ({ message: response.statusText }));
+      throw new Error(`Failed to delete variable: ${error.message}`);
     }
   }
 }
 
-export function createApiClient(config?: { baseUrl: string; region: string }): ApiClient {
+export function createApiClient(config?: { baseUrl: string }): ApiClient {
   // Log configuration for debugging
   console.log('AWS Config:', {
     provided: !!config,
-    baseUrl: config?.baseUrl || 'not provided',
-    region: config?.region || 'not provided'
+    baseUrl: config?.baseUrl || 'not provided'
   });
 
-  if (config?.baseUrl && config?.region) {
-    console.log('Using AWS API Client');
-    return new AWSApiClient(config.baseUrl, config.region);
+  if (!config?.baseUrl) {
+    console.warn('Missing AWS configuration, falling back to Mock API Client');
+    return createMockApiClient();
   }
 
-  console.log('Falling back to Mock API Client');
-  return createMockApiClient();
+  console.log('Using AWS API Client');
+  return new AWSApiClient(config.baseUrl);
 }
