@@ -10,6 +10,10 @@ export const createMockApiClient = () => {
       { id: 1, name: "PORT", value: "3001", isSecure: false, version: 1 },
       { id: 2, name: "AWS_S3_SECRET_ACCESS_KEY", value: "supersecret", isSecure: true, version: 3 },
     ],
+    "ortelius/prod": [
+      { id: 1, name: "PORT", value: "3001", isSecure: false, version: 1 },
+      { id: 2, name: "AWS_S3_SECRET_ACCESS_KEY", value: "supersecret2", isSecure: true, version: 3 }
+    ],
   };
 
   return {

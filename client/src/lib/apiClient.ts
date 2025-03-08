@@ -21,24 +21,17 @@ export class AWSApiClient implements ApiClient {
 
   async fetchNamespaces(): Promise<Record<string, Parameter[]>> {
     try {
-      const namespaces = ['ortelius/dev', 'ortelius/prod'];
-      const result: Record<string, Parameter[]> = {};
+      const response = await fetch(`${this.baseUrl}/api/parameters`);
 
-      for (const namespace of namespaces) {
-        const response = await fetch(`${this.baseUrl}/api/parameters/${namespace}`);
-
-        if (!response.ok) {
-          const error = await response.json().catch(() => ({ message: response.statusText }));
-          throw new Error(`Failed to fetch namespace ${namespace}: ${error.message}`);
-        }
-
-        const parameters = await response.json();
-        result[namespace] = parameters;
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: response.statusText }));
+        throw new Error(`Failed to fetch parameters: ${error.message}`);
       }
 
-      return result;
+      const parameters = await response.json();
+      return parameters;
     } catch (error) {
-      console.error('Error fetching namespaces:', error);
+      console.error('Error fetching parameters:', error);
       throw error;
     }
   }

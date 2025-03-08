@@ -12,29 +12,44 @@ const ssmClient = new SSMClient({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Get all parameters in a namespace
-  app.get("/api/parameters/:namespace", async (req, res) => {
+  // Get all parameters
+  app.get("/api/parameters", async (_req, res) => {
     try {
-      const { namespace } = req.params;
-      console.log(`Fetching parameters for namespace: ${namespace}`);
+      console.log('Fetching all parameters');
 
       const command = new GetParametersByPathCommand({
-        Path: `/${namespace}`,
+        Path: '/',
         Recursive: true,
         WithDecryption: true,
       });
 
       console.log('Sending AWS SSM request');
       const response = await ssmClient.send(command);
-      const parameters = response.Parameters?.map(param => ({
-        id: Date.now(), // Use timestamp as ID
-        name: param.Name?.split('/').pop() || '',
-        value: param.Value || '',
-        isSecure: param.Type === 'SecureString',
-        version: param.Version || 1,
-      })) || [];
 
-      res.json(parameters);
+      // Group parameters by namespace
+      const parametersByNamespace: Record<string, any[]> = {};
+
+      response.Parameters?.forEach(param => {
+        const fullPath = param.Name || '';
+        // Remove the leading slash and get the namespace (everything before the last segment)
+        const parts = fullPath.substring(1).split('/');
+        const paramName = parts.pop() || '';
+        const namespace = parts.join('/');
+
+        if (!parametersByNamespace[namespace]) {
+          parametersByNamespace[namespace] = [];
+        }
+
+        parametersByNamespace[namespace].push({
+          id: Date.now(), // Use timestamp as ID
+          name: paramName,
+          value: param.Value || '',
+          isSecure: param.Type === 'SecureString',
+          version: param.Version || 1,
+        });
+      });
+
+      res.json(parametersByNamespace);
     } catch (error) {
       console.error('Error fetching parameters:', error);
       res.status(500).json({ message: "Failed to fetch parameters" });

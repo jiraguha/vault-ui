@@ -23,15 +23,13 @@ export default function Parameters() {
   const [apiClient] = useState(() => {
     // Log environment variables for debugging
     console.log('Environment variables:', {
-      baseUrl: import.meta.env.VITE_AWS_API_URL,
-      region: import.meta.env.VITE_AWS_REGION
+      baseUrl: import.meta.env.VITE_AWS_API_URL
     });
 
     return createApiClient(
-      import.meta.env.VITE_AWS_API_URL && import.meta.env.VITE_AWS_REGION 
+      import.meta.env.VITE_AWS_API_URL
         ? {
-            baseUrl: import.meta.env.VITE_AWS_API_URL,
-            region: import.meta.env.VITE_AWS_REGION,
+            baseUrl: import.meta.env.VITE_AWS_API_URL
           }
         : undefined
     );
