@@ -20,14 +20,22 @@ export default function Parameters() {
   const [showDialog, setShowDialog] = useState(false);
   const [showSecrets, setShowSecrets] = useState<Set<number>>(new Set());
   const [editingParameter, setEditingParameter] = useState<Parameter | null>(null);
-  const [apiClient] = useState(() => createApiClient(
-    import.meta.env.VITE_AWS_API_URL && import.meta.env.VITE_AWS_REGION 
-      ? {
-          baseUrl: import.meta.env.VITE_AWS_API_URL,
-          region: import.meta.env.VITE_AWS_REGION,
-        }
-      : undefined
-  ));
+  const [apiClient] = useState(() => {
+    // Log environment variables
+    console.log('Environment variables:', {
+      baseUrl: import.meta.env.VITE_AWS_API_URL,
+      region: import.meta.env.VITE_AWS_REGION
+    });
+
+    return createApiClient(
+      import.meta.env.VITE_AWS_API_URL && import.meta.env.VITE_AWS_REGION 
+        ? {
+            baseUrl: import.meta.env.VITE_AWS_API_URL,
+            region: import.meta.env.VITE_AWS_REGION,
+          }
+        : undefined
+    );
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showNamespaceDialog, setShowNamespaceDialog] = useState(false);
   const [newNamespace, setNewNamespace] = useState("");
