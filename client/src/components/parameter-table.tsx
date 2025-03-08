@@ -106,7 +106,6 @@ export default function ParameterTable({ parameters, isLoading, onEdit }: Parame
                   )}
                 </div>
               </TableCell>
-              <TableCell>{param.environment}</TableCell>
               <TableCell>
                 <div className="flex items-center gap-2">
                   <Button

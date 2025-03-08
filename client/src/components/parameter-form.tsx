@@ -32,8 +32,7 @@ export default function ParameterForm({ parameter, environment, onSuccess }: Par
     defaultValues: {
       name: parameter?.name || "",
       value: parameter?.value || "",
-      isSecure: parameter?.isSecure || false,
-      environment: environment as "development" | "production",
+      isSecure: parameter?.isSecure || false
     },
   });
 
