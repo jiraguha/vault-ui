@@ -32,6 +32,8 @@ docker run --rm \
   -p 5500:5500 jpiraguha/vault-ui:0.1.0
 ```
 
+This will start the application on port 5500. Access it at http://localhost:5500 in your browser.
+
 ## Project Structure
 
 - `/client` - React frontend application with TypeScript and Tailwind CSS
@@ -66,21 +68,6 @@ Start the development server:
 ```bash
 npm run dev
 ```
-
-### Docker Usage
-
-You can also run the application using Docker:
-
-```bash
-docker run --rm \
-  -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
-  -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
-  -e AWS_DEFAULT_REGION=eu-west-3 \
-  -p 5500:5500 jpiraguha/vault-ui:0.1.0
-```
-
-This will start the application on port 5500. Access it at http://localhost:5500 in your browser.
-
 
 ## Technologies Used
 
