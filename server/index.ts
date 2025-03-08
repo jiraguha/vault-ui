@@ -97,7 +97,24 @@ app.use((req, res, next) => {
   } else {
     serveStatic(app);
   }
-  const port = 5000;
+
+  // Handle graceful shutdown
+  process.on('SIGINT', () => {
+    console.log('SIGINT signal received: closing HTTP server');
+    server.close(() => {
+      console.log('HTTP server closed');
+      process.exit(0);
+    });
+  });
+
+  process.on('SIGTERM', () => {
+    console.log('SIGTERM signal received: closing HTTP server');
+    server.close(() => {
+      console.log('HTTP server closed');
+      process.exit(0);
+    });
+  });
+  const port = 5500;
   server.listen({
     port,
   }, () => {
@@ -109,9 +126,11 @@ app.use((req, res, next) => {
 
     console.log('Using AWS SSM Client with configuration:', {
       region,
-      baseUrl: "http://localhost:5000"
+      baseUrl: "http://localhost:5500"
     });
 
     log(`Server is running on port ${port}`);
   });
 })();
+
+
