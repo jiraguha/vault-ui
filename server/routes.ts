@@ -9,13 +9,24 @@ export async function registerRoutes(app: Express, ssmClient: SSMClient): Promis
       console.log('Fetching all parameters');
 
       const command = new GetParametersByPathCommand({
-        Path: '/',
+        Path: '/',  // Specify the root path for parameters
         Recursive: true,
         WithDecryption: true,
       });
 
-      console.log('Sending AWS SSM request');
+      console.log('Sending AWS SSM request:', {
+        path: '/',
+        recursive: true,
+        withDecryption: true
+      });
+
       const response = await ssmClient.send(command);
+
+      console.log('AWS SSM response received:', {
+        parametersCount: response.Parameters?.length || 0,
+        success: true,
+        timestamp: new Date().toISOString()
+      });
 
       // Group parameters by namespace
       const parametersByNamespace: Record<string, any[]> = {};
@@ -40,9 +51,23 @@ export async function registerRoutes(app: Express, ssmClient: SSMClient): Promis
         });
       });
 
+      console.log('Parameters grouped by namespace:', {
+        namespaceCount: Object.keys(parametersByNamespace).length,
+        namespaces: Object.keys(parametersByNamespace),
+        timestamp: new Date().toISOString()
+      });
+
       res.json(parametersByNamespace);
     } catch (error) {
       console.error('Error fetching parameters:', error);
+      if (error instanceof Error) {
+        console.error('Error details:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+          timestamp: new Date().toISOString()
+        });
+      }
       res.status(500).json({ message: error instanceof Error ? error.message : "Failed to fetch parameters" });
     }
   });
@@ -52,19 +77,21 @@ export async function registerRoutes(app: Express, ssmClient: SSMClient): Promis
     try {
       const { namespace } = req.params;
       const { name, value, isSecure } = req.body;
+      console.log(`Creating parameter in namespace ${namespace}:`, { name, isSecure });
 
       if (!name || !value) {
         return res.status(400).json({ message: "Name and value are required" });
       }
 
       const command = new PutParameterCommand({
-        Name: `/${namespace}/${name}`,
+        Name: `/ortelius/${namespace}/${name}`,  // Add /ortelius prefix
         Value: value,
         Type: isSecure ? 'SecureString' : 'String',
         Overwrite: false,
       });
 
       await ssmClient.send(command);
+      console.log(`Parameter created successfully: /${namespace}/${name}`);
       res.status(201).json({ message: "Parameter created" });
     } catch (error) {
       console.error('Error creating parameter:', error);
@@ -77,19 +104,21 @@ export async function registerRoutes(app: Express, ssmClient: SSMClient): Promis
     try {
       const { namespace, name } = req.params;
       const { value, isSecure } = req.body;
+      console.log(`Updating parameter: /${namespace}/${name}`);
 
       if (!value) {
         return res.status(400).json({ message: "Value is required" });
       }
 
       const command = new PutParameterCommand({
-        Name: `/${namespace}/${name}`,
+        Name: `/ortelius/${namespace}/${name}`,  // Add /ortelius prefix
         Value: value,
         Type: isSecure ? 'SecureString' : 'String',
         Overwrite: true,
       });
 
       await ssmClient.send(command);
+      console.log(`Parameter updated successfully: /${namespace}/${name}`);
       res.json({ message: "Parameter updated" });
     } catch (error) {
       console.error('Error updating parameter:', error);
@@ -101,12 +130,14 @@ export async function registerRoutes(app: Express, ssmClient: SSMClient): Promis
   app.delete("/api/parameters/:namespace/variables/:name", async (req, res) => {
     try {
       const { namespace, name } = req.params;
+      console.log(`Deleting parameter: /${namespace}/${name}`);
 
       const command = new DeleteParameterCommand({
-        Name: `/${namespace}/${name}`,
+        Name: `/ortelius/${namespace}/${name}`,  // Add /ortelius prefix
       });
 
       await ssmClient.send(command);
+      console.log(`Parameter deleted successfully: /${namespace}/${name}`);
       res.status(204).end();
     } catch (error) {
       console.error('Error deleting parameter:', error);

@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { SSMClient } from "@aws-sdk/client-ssm";
+import cors from 'cors';
 
 // Validate AWS credentials before starting the server
 if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
@@ -10,33 +11,37 @@ if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
   process.exit(1);
 }
 
-// Create a single SSM client instance
+// Validate AWS region
+const region = process.env.AWS_REGION || 'eu-west-3';
+console.log('AWS Configuration:', {
+  accessKeyIdPresent: !!process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKeyPresent: !!process.env.AWS_SECRET_ACCESS_KEY,
+  region,
+});
+
+console.log('Creating AWS SSM client...');
 const ssmClient = new SSMClient({ 
-  region: process.env.AWS_REGION || 'eu-west-3',
+  region,
   credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || ''
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
   }
 });
+console.log('AWS SSM client created successfully');
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Add CORS middleware
-app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+// Configure CORS
+app.use(cors({
+  origin: true, // Allow requests from any origin
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
 
-  // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  next();
-});
-
+// Add logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -74,8 +79,8 @@ app.use((req, res, next) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
+    console.error('Server error:', err);
     res.status(status).json({ message });
-    throw err;
   });
 
   if (app.get("env") === "development") {
@@ -90,6 +95,17 @@ app.use((req, res, next) => {
     host: "0.0.0.0",
     reusePort: true,
   }, () => {
-    log(`serving on port ${port}`);
+    console.log('AWS Environment:', {
+      region: process.env.AWS_REGION || 'eu-west-3',
+      accessKeyIdLength: process.env.AWS_ACCESS_KEY_ID?.length || 0,
+      secretAccessKeyLength: process.env.AWS_SECRET_ACCESS_KEY?.length || 0
+    });
+
+    console.log('Using AWS SSM Client with configuration:', {
+      region,
+      baseUrl: "http://localhost:5000"
+    });
+
+    log(`Server is running on port ${port}`);
   });
 })();
