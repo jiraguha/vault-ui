@@ -85,7 +85,7 @@ export default function Parameters() {
       const existingParam = editingParameter || data[selectedNamespace]?.find(p => p.name === newKey);
 
       if (existingParam) {
-        apiClient.updateVariable(selectedNamespace, existingParameter.name, variable).then(() => {
+        apiClient.updateVariable(selectedNamespace, existingParam.name, variable).then(() => {
           apiClient.fetchNamespaces().then(setData);
           resetForm();
           setShowDialog(false);

@@ -1,7 +1,6 @@
 import { parameters, type Parameter, type InsertParameter } from "@shared/schema";
 
 export interface IStorage {
-  getParameters(environment: string): Promise<Parameter[]>;
   createParameter(parameter: InsertParameter): Promise<Parameter>;
   updateParameter(id: number, parameter: Partial<InsertParameter>): Promise<Parameter>;
   deleteParameter(id: number): Promise<void>;
@@ -14,12 +13,6 @@ export class MemStorage implements IStorage {
   constructor() {
     this.parameters = new Map();
     this.currentId = 1;
-  }
-
-  async getParameters(environment: string): Promise<Parameter[]> {
-    return Array.from(this.parameters.values()).filter(
-      (param) => param.environment === environment,
-    );
   }
 
   async createParameter(insertParameter: InsertParameter): Promise<Parameter> {
