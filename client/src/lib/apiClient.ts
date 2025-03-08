@@ -16,7 +16,7 @@ export class AWSApiClient implements ApiClient {
     if (!baseUrl) {
       throw new Error("AWS API client requires baseUrl");
     }
-    this.baseUrl = baseUrl;
+    this.baseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
   }
 
   private async makeRequest(path: string, options?: RequestInit) {

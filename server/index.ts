@@ -30,18 +30,22 @@ console.log('AWS SSM client created successfully');
 
 const app = express();
 
+// Basic middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Add permissive CORS headers to all responses
+// CORS middleware - completely permissive for development
 app.use((req, res, next) => {
+  // Allow requests from any origin
   res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.header('Access-Control-Allow-Methods', '*');
   res.header('Access-Control-Allow-Headers', '*');
+  res.header('Access-Control-Max-Age', '86400'); // 24 hours
 
-  // Handle preflight requests
+  // Handle preflight
   if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+    res.sendStatus(200);
+    return;
   }
   next();
 });
