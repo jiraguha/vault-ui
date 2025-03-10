@@ -25,6 +25,7 @@ export default function Parameters() {
   const [newNamespace, setNewNamespace] = useState("");
   const [showDownloadDialog, setShowDownloadDialog] = useState(false);
   const [downloadFilename, setDownloadFilename] = useState("");
+  const [displayCount, setDisplayCount] = useState(Number.MAX_SAFE_INTEGER); // Show all items at once
 
   const [apiClient] = useState(() => {
     console.log('Environment variables:', {
@@ -32,11 +33,11 @@ export default function Parameters() {
     });
 
     return createApiClient(
-      import.meta.env.VITE_AWS_API_URL
-        ? {
-            baseUrl: import.meta.env.VITE_AWS_API_URL
-          }
-        : undefined
+        import.meta.env.VITE_AWS_API_URL
+            ? {
+              baseUrl: import.meta.env.VITE_AWS_API_URL
+            }
+            : undefined
     );
   });
 
@@ -52,7 +53,7 @@ export default function Parameters() {
         console.error('Failed to fetch parameters:', err);
         const errorMessage = err instanceof Error ? err.message : 'Failed to fetch parameters';
         setError(errorMessage);
-        toast({ 
+        toast({
           title: "Error fetching parameters",
           description: errorMessage,
           variant: "destructive"
@@ -81,6 +82,8 @@ export default function Parameters() {
       [namespace]: !prev[namespace]
     }));
   };
+
+  // No need to reset display count when changing namespaces as we show all items
 
   const getBaseNamespace = (namespace: string) => {
     return namespace.split('/')[0];
@@ -162,17 +165,17 @@ export default function Parameters() {
       let created = 0;
 
       const variables = content
-        .split('\n')
-        .filter(line => line.trim() && !line.startsWith('#'))
-        .map(line => {
-          const [key, ...valueParts] = line.split('=');
-          const value = valueParts.join('=');
-          return {
-            name: key.trim(),
-            value: value.trim().replace(/^["']|["']$/g, ''),
-            isSecure: key.toLowerCase().includes('secret') || key.toLowerCase().includes('password')
-          };
-        });
+          .split('\n')
+          .filter(line => line.trim() && !line.startsWith('#'))
+          .map(line => {
+            const [key, ...valueParts] = line.split('=');
+            const value = valueParts.join('=');
+            return {
+              name: key.trim(),
+              value: value.trim().replace(/^["']|["']$/g, ''),
+              isSecure: key.toLowerCase().includes('secret') || key.toLowerCase().includes('password')
+            };
+          });
 
       for (const variable of variables) {
         try {
@@ -202,10 +205,10 @@ export default function Parameters() {
 
   const createNamespace = async () => {
     if (!newNamespace.trim() || !newKey || !newValue) {
-      toast({ 
-        title: "All fields are required", 
+      toast({
+        title: "All fields are required",
         description: "Please provide namespace name and initial variable details",
-        variant: "destructive" 
+        variant: "destructive"
       });
       return;
     }
@@ -223,10 +226,10 @@ export default function Parameters() {
       resetNamespaceDialog();
       toast({ title: "Namespace created successfully" });
     } catch (error) {
-      toast({ 
-        title: "Failed to create namespace", 
+      toast({
+        title: "Failed to create namespace",
         description: error instanceof Error ? error.message : "Unknown error",
-        variant: "destructive" 
+        variant: "destructive"
       });
     }
   };
@@ -251,11 +254,11 @@ export default function Parameters() {
     if (!selectedNamespace || !data[selectedNamespace]) return;
 
     const envContent = data[selectedNamespace]
-      .map(param => {
-        const value = param.value.includes(' ') ? `"${param.value}"` : param.value;
-        return `${param.name}=${value}`;
-      })
-      .join('\n');
+        .map(param => {
+          const value = param.value.includes(' ') ? `"${param.value}"` : param.value;
+          return `${param.name}=${value}`;
+        })
+        .join('\n');
 
     const blob = new Blob([envContent], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
@@ -271,269 +274,279 @@ export default function Parameters() {
 
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between gap-3 mb-4">
-        <div className="flex items-center gap-3">
-          <h2 className="text-2xl font-bold">Vault UI</h2>
-          <Badge variant="outline">v1.0.0</Badge>
+      <div className="p-6">
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-3">
+            <h2 className="text-2xl font-bold">AWS Parameter Store UI</h2>
+            <Badge variant="outline">v1.0.0</Badge>
+          </div>
+          <Button onClick={() => setShowNamespaceDialog(true)} size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            Create Namespace
+          </Button>
         </div>
-        <Button onClick={() => setShowNamespaceDialog(true)} size="sm">
-          <Plus className="h-4 w-4 mr-2" />
-          Create Namespace
-        </Button>
-      </div>
 
-      {error && (
-        <div className="bg-destructive/15 border border-destructive text-destructive px-4 py-3 rounded-md mb-4">
-          <p className="font-medium">Error</p>
-          <p className="text-sm">{error}</p>
-        </div>
-      )}
-
-      <div className="flex gap-4">
-        <div className="w-64 border-r pr-4">
-          {Object.entries(groupedNamespaces).map(([base, namespaces]) => (
-            <div key={base} className="mb-2">
-              <div
-                className="flex items-center gap-2 p-2 hover:bg-accent rounded cursor-pointer"
-                onClick={() => toggleNamespace(base)}
-              >
-                {expandedNamespaces[base] ? (
-                  <ChevronDown className="h-4 w-4" />
-                ) : (
-                  <ChevronRight className="h-4 w-4" />
-                )}
-                <span className="font-medium">{base}</span>
-              </div>
-              {expandedNamespaces[base] && (
-                <div className="ml-6 space-y-1">
-                  {namespaces.map(namespace => (
-                    <div
-                      key={namespace}
-                      onClick={() => setSelectedNamespace(namespace)}
-                      className={`flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-accent ${
-                        selectedNamespace === namespace ? "bg-accent" : ""
-                      }`}
-                    >
-                      <Key className="h-4 w-4" />
-                      <span>{getEnvironment(namespace)}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
+        {error && (
+            <div className="bg-destructive/15 border border-destructive text-destructive px-4 py-3 rounded-md mb-4">
+              <p className="font-medium">Error</p>
+              <p className="text-sm">{error}</p>
             </div>
-          ))}
-        </div>
+        )}
 
-        {selectedNamespace && (
-          <div className="flex-1">
-            <Card>
-              <CardContent className="py-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-xl font-semibold">{selectedNamespace} Variables</h3>
-                  <div className="flex gap-2">
-                    <input
-                      type="file"
-                      accept=".env"
-                      onChange={handleFileUpload}
-                      className="hidden"
-                      id="file-upload"
-                    />
-                    <Button
-                      onClick={() => document.getElementById('file-upload')?.click()}
-                      size="sm"
-                      variant="outline"
-                    >
-                      <Upload className="h-4 w-4 mr-2" />
-                      Import .env
-                    </Button>
-                    <Button
-                      onClick={downloadEnvFile}
-                      size="sm"
-                      variant="outline"
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      Download .env
-                    </Button>
-                    <Button onClick={() => {
-                      resetForm();
-                      setShowDialog(true);
-                    }} size="sm">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Variable
-                    </Button>
+        <div className="flex gap-4">
+          <div className="w-64 border-r pr-4">
+            {Object.entries(groupedNamespaces).map(([base, namespaces]) => (
+                <div key={base} className="mb-2">
+                  <div
+                      className="flex items-center gap-2 p-2 hover:bg-accent rounded cursor-pointer"
+                      onClick={() => toggleNamespace(base)}
+                  >
+                    {expandedNamespaces[base] ? (
+                        <ChevronDown className="h-4 w-4" />
+                    ) : (
+                        <ChevronRight className="h-4 w-4" />
+                    )}
+                    <span className="font-medium">{base}</span>
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  {data[selectedNamespace]?.map((param) => (
-                    <div
-                      key={param.id}
-                      className="flex items-center justify-between border-b p-2"
-                    >
-                      <div className="flex flex-col">
-                        <span className="font-medium">{param.name}</span>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Badge variant="secondary" className="text-xs">
-                            v{param.version || 1}
-                          </Badge>
-                          {param.isSecure && (
-                            <Badge variant="outline" className="text-xs">
-                              secure
-                            </Badge>
-                          )}
-                        </div>
+                  {expandedNamespaces[base] && (
+                      <div className="ml-6 space-y-1">
+                        {namespaces.map(namespace => (
+                            <div
+                                key={namespace}
+                                onClick={() => setSelectedNamespace(namespace)}
+                                className={`flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-accent ${
+                                    selectedNamespace === namespace ? "bg-accent" : ""
+                                }`}
+                            >
+                              <Key className="h-4 w-4" />
+                              <span>{getEnvironment(namespace)}</span>
+                            </div>
+                        ))}
                       </div>
-                      <div className="flex items-center gap-2">
+                  )}
+                </div>
+            ))}
+          </div>
+
+          {selectedNamespace && (
+              <div className="flex-1">
+                <Card>
+                  <CardContent className="py-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-xl font-semibold">{selectedNamespace} Variables</h3>
+                      <div className="flex gap-2">
+                        <input
+                            type="file"
+                            accept=".env"
+                            onChange={handleFileUpload}
+                            className="hidden"
+                            id="file-upload"
+                        />
+                        <Button
+                            onClick={() => document.getElementById('file-upload')?.click()}
+                            size="sm"
+                            variant="outline"
+                        >
+                          <Upload className="h-4 w-4 mr-2" />
+                          Import .env
+                        </Button>
+                        <Button
+                            onClick={downloadEnvFile}
+                            size="sm"
+                            variant="outline"
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Download .env
+                        </Button>
+                        <Button onClick={() => {
+                          resetForm();
+                          setShowDialog(true);
+                        }} size="sm">
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Variable
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div
+                        className="space-y-2"
+
+                        style={{ maxHeight: '70vh', overflowY: 'auto', padding: '0.5rem' }}
+                    >
+                      {data[selectedNamespace]?.map((param) => (
+                          <div
+                              key={param.id}
+                              className="flex items-center justify-between border-b p-2"
+                          >
+                            <div className="flex flex-col">
+                              <span className="font-medium">{param.name}</span>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Badge variant="secondary" className="text-xs">
+                                  v{param.version || 1}
+                                </Badge>
+                                {param.isSecure && (
+                                    <Badge variant="outline" className="text-xs">
+                                      secure
+                                    </Badge>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
                         <span className="font-mono">
                           {param.isSecure && !showSecrets.has(param.id)
-                            ? "••••••••"
-                            : param.value}
+                              ? "••••••••"
+                              : param.value}
                         </span>
-                        {param.isSecure && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => toggleSecret(param.id)}
-                          >
-                            {showSecrets.has(param.id) ? (
-                              <EyeOff className="h-4 w-4" />
-                            ) : (
-                              <Eye className="h-4 w-4" />
-                            )}
-                          </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => startEditing(param)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => deleteVariable(param.name)}
-                        >
-                          <Trash className="h-4 w-4" />
-                        </Button>
-                      </div>
+                              {param.isSecure && (
+                                  <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => toggleSecret(param.id)}
+                                  >
+                                    {showSecrets.has(param.id) ? (
+                                        <EyeOff className="h-4 w-4" />
+                                    ) : (
+                                        <Eye className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                              )}
+                              <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => startEditing(param)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => deleteVariable(param.name)}
+                              >
+                                <Trash className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                      ))}
+
+                      {selectedNamespace && data[selectedNamespace]?.length > 0 && (
+                          <div className="text-center text-sm text-muted-foreground mt-2">
+                            Showing all {data[selectedNamespace].length} items
+                          </div>
+                      )}
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-      </div>
+                  </CardContent>
+                </Card>
+              </div>
+          )}
+        </div>
 
-      <Dialog open={showDialog} onOpenChange={(open) => {
-        if (!open) resetForm();
-        setShowDialog(open);
-      }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {editingParameter ? 'Edit Parameter' : 'Add Environment Variable'}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 pt-4">
-            <Input
-              placeholder="Key"
-              value={newKey}
-              onChange={(e) => setNewKey(e.target.value)}
-              disabled={!!editingParameter}
-            />
-            <Input
-              placeholder="Value"
-              value={newValue}
-              onChange={(e) => setNewValue(e.target.value)}
-              type={isSecure ? "password" : "text"}
-            />
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Secure Parameter</span>
-              <Switch
-                checked={isSecure}
-                onCheckedChange={setIsSecure}
-              />
-            </div>
-            <Button onClick={addOrUpdateVariable} className="w-full">
-              {editingParameter ? 'Update' : 'Save'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showNamespaceDialog} onOpenChange={(open) => {
-        if (!open) resetNamespaceDialog();
-        setShowNamespaceDialog(open);
-      }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create New Namespace</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 pt-4">
-            <Input
-              placeholder="Namespace name (e.g., myapp/dev)"
-              value={newNamespace}
-              onChange={(e) => setNewNamespace(e.target.value)}
-            />
-            <Input
-              placeholder="Initial Variable Key"
-              value={newKey}
-              onChange={(e) => setNewKey(e.target.value)}
-            />
-            <Input
-              placeholder="Initial Variable Value"
-              value={newValue}
-              onChange={(e) => setNewValue(e.target.value)}
-              type={isSecure ? "password" : "text"}
-            />
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Secure Parameter</span>
-              <Switch
-                checked={isSecure}
-                onCheckedChange={setIsSecure}
-              />
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={resetNamespaceDialog}>
-                Cancel
-              </Button>
-              <Button onClick={createNamespace}>
-                Create Namespace
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Download Dialog */}
-      <Dialog open={showDownloadDialog} onOpenChange={setShowDownloadDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Download Environment Variables</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 pt-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Filename</label>
+        <Dialog open={showDialog} onOpenChange={(open) => {
+          if (!open) resetForm();
+          setShowDialog(open);
+        }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {editingParameter ? 'Edit Parameter' : 'Add Environment Variable'}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-4">
               <Input
-                value={downloadFilename}
-                onChange={(e) => setDownloadFilename(e.target.value)}
-                placeholder="myapp-dev.env"
+                  placeholder="Key"
+                  value={newKey}
+                  onChange={(e) => setNewKey(e.target.value)}
+                  disabled={!!editingParameter}
               />
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowDownloadDialog(false)}>
-                Cancel
+              <Input
+                  placeholder="Value"
+                  value={newValue}
+                  onChange={(e) => setNewValue(e.target.value)}
+                  type={isSecure ? "password" : "text"}
+              />
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Secure Parameter</span>
+                <Switch
+                    checked={isSecure}
+                    onCheckedChange={setIsSecure}
+                />
+              </div>
+              <Button onClick={addOrUpdateVariable} className="w-full">
+                {editingParameter ? 'Update' : 'Save'}
               </Button>
-              <Button onClick={handleDownload}>
-                Download
-              </Button>
             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showNamespaceDialog} onOpenChange={(open) => {
+          if (!open) resetNamespaceDialog();
+          setShowNamespaceDialog(open);
+        }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create New Namespace</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-4">
+              <Input
+                  placeholder="Namespace name (e.g., myapp/dev)"
+                  value={newNamespace}
+                  onChange={(e) => setNewNamespace(e.target.value)}
+              />
+              <Input
+                  placeholder="Initial Variable Key"
+                  value={newKey}
+                  onChange={(e) => setNewKey(e.target.value)}
+              />
+              <Input
+                  placeholder="Initial Variable Value"
+                  value={newValue}
+                  onChange={(e) => setNewValue(e.target.value)}
+                  type={isSecure ? "password" : "text"}
+              />
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Secure Parameter</span>
+                <Switch
+                    checked={isSecure}
+                    onCheckedChange={setIsSecure}
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={resetNamespaceDialog}>
+                  Cancel
+                </Button>
+                <Button onClick={createNamespace}>
+                  Create Namespace
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Download Dialog */}
+        <Dialog open={showDownloadDialog} onOpenChange={setShowDownloadDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Download Environment Variables</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Filename</label>
+                <Input
+                    value={downloadFilename}
+                    onChange={(e) => setDownloadFilename(e.target.value)}
+                    placeholder="myapp-dev.env"
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setShowDownloadDialog(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleDownload}>
+                  Download
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
   );
 }

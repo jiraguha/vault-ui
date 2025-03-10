@@ -8,48 +8,44 @@ export async function registerRoutes(app: Express, ssmClient: SSMClient): Promis
     try {
       console.log('Fetching all parameters');
 
-      const command = new GetParametersByPathCommand({
-        Path: '/',  // Specify the root path for parameters
-        Recursive: true,
-        WithDecryption: true,
-      });
-
-      console.log('Sending AWS SSM request:', {
-        path: '/',
-        recursive: true,
-        withDecryption: true
-      });
-
-      const response = await ssmClient.send(command);
-
-      console.log('AWS SSM response received:', {
-        parametersCount: response.Parameters?.length || 0,
-        success: true,
-        timestamp: new Date().toISOString()
-      });
-
       // Group parameters by namespace
       const parametersByNamespace: Record<string, any[]> = {};
+      let nextToken: string | undefined;
 
-      response.Parameters?.forEach(param => {
-        const fullPath = param.Name || '';
-        // Remove the leading slash and get the namespace (everything before the last segment)
-        const parts = fullPath.substring(1).split('/');
-        const paramName = parts.pop() || '';
-        const namespace = parts.join('/');
-
-        if (!parametersByNamespace[namespace]) {
-          parametersByNamespace[namespace] = [];
-        }
-
-        parametersByNamespace[namespace].push({
-          id: paramName, // Use timestamp as ID
-          name: paramName,
-          value: param.Value || '',
-          isSecure: param.Type === 'SecureString',
-          version: param.Version || 1,
+      // Use pagination to get all parameters
+      do {
+        const command = new GetParametersByPathCommand({
+          Path: '/',  // Specify the root path for parameters
+          Recursive: true,
+          WithDecryption: true,
+          MaxResults: 10,  // AWS SSM limits to max 10 results per request
+          NextToken: nextToken
         });
-      });
+
+        const response = await ssmClient.send(command);
+        nextToken = response.NextToken;
+
+        // Process current batch of parameters
+        response.Parameters?.forEach(param => {
+          const fullPath = param.Name || '';
+          // Remove the leading slash and get the namespace (everything before the last segment)
+          const parts = fullPath.substring(1).split('/');
+          const paramName = parts.pop() || '';
+          const namespace = parts.join('/');
+
+          if (!parametersByNamespace[namespace]) {
+            parametersByNamespace[namespace] = [];
+          }
+
+          parametersByNamespace[namespace].push({
+            id: fullPath, // Use timestamp as ID
+            name: paramName,
+            value: param.Value || '',
+            isSecure: param.Type === 'SecureString',
+            version: param.Version || 1,
+          });
+        });
+      } while (nextToken);
 
       console.log('Parameters grouped by namespace:', {
         namespaceCount: Object.keys(parametersByNamespace).length,
